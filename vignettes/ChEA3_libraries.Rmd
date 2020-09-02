@@ -1,0 +1,107 @@
+---
+title: "ChEA3_libraries"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{test}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# Tasks
+
+1. download ChEA3 libraries  
+2. convert gmt-file into table  
+3. visualise TF-coverage overlap between different libraries  
+
+# Setup packages
+
+```{r Setup}
+library(tidyverse)
+```
+
+# Curation of the libraries
+
+## Download ChEA3 libraries
+
+See Downloads on [ChEA3 website](https://amp.pharm.mssm.edu/chea3/).
+
+```{r Downoad libraries}
+archs4 <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/ARCHS4_Coexpression.gmt", delim = "\t", col_names = FALSE)
+encode <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/ENCODE_ChIP-seq.gmt", delim = "\t", col_names = FALSE)
+enrichr <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/Enrichr_Queries.gmt", delim = "\t", col_names = FALSE)
+gtex <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/GTEx_Coexpression.gmt", delim = "\t", col_names = FALSE)
+literature <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/Literature_ChIP-seq.gmt", delim = "\t", col_names = FALSE)
+remap <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/ReMap_ChIP-seq.gmt", delim = "\t", col_names = FALSE)
+```
+
+Rename TF column and filter out human TFs if necessary.
+
+```{r Rename and filter}
+archs4 <- archs4 %>% 
+    rename(tf = X1) %>%
+    separate(tf, into = c("tf"), sep="_", extra = "drop")
+
+encode  <- encode %>% 
+    filter(grepl("HG19", X1)) %>%  # extract human TFs
+    rename(tf = X1) %>%
+    separate(tf, into = c("tf"), sep="_", extra = "drop")
+
+enrichr <- enrichr %>% 
+    rename(tf=X1)
+
+gtex <- gtex %>% 
+    rename(tf=X1)
+
+literature <- literature %>% 
+    filter(grepl("HUMAN", X1)) %>%  # 4 human TFs are missing (should be 138)
+    rename(tf = X1) %>%
+    separate(tf, into = c("tf"), sep="_", extra = "drop")
+
+remap <- remap %>% 
+    rename(tf=X1)
+```
+
+## Create "tidy" interaction tables
+
+```{r Interaction tables}
+# Define function to produce paired interaction tables
+
+interaction_table <- function(library, interaction_library, confidence) {
+    interaction_library <- library %>%
+        select(tf, target=X2) %>% 
+        add_column(confidence=confidence)
+    cols <- seq(3, ncol(library))
+    for (col in cols) {
+        paired_interactions <- library %>% select(tf, target = col) %>% add_column(confidence=confidence)
+        interaction_library <- interaction_library %>% add_row(paired_interactions)
+    }
+    return(interaction_library)
+}
+
+
+# Apply function to build interaction tables
+archs4_interactions <- interaction_table(archs4, archs4_interactions, "archs4_coexpression")
+encode_interactions <- interaction_table(encode, encode_interactions, "encode_chip-seq")
+enrichr_interactions <- interaction_table(enrichr, enrichr_interactions, "enrichr_queries")
+gtex_interactions <- interaction_table(gtex, gtex_interactions, "gtex_coexpression")
+literature_interactions <- interaction_table(literature, literature_interactions, "literature_chip-seq")
+remap_interactions <- interaction_table(remap, remap_interactions, "remap_chip-seq")
+
+libs <- list(archs4_interactions, encode_interactions, enrichr_interactions, gtex_interactions, literature_interactions, remap_interactions)
+
+combined_libs <- map_dfr(libs, function(lib) {
+  lib <- lib %>% arrange(tf, target)
+})
+
+grouped_libs <- group_by(combined_libs, tf, target)
+
+```
+
+
