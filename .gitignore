@@ -51,3 +51,6 @@ Icon
 docs
 docs/
 inst/doc
+
+# Mac system files
+.DS_Store
