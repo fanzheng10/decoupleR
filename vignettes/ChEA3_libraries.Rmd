@@ -1,38 +1,48 @@
 ---
-title: "ChEA3_libraries"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{test}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+title: "ChEA3 libraries"
+author: "Celina Geiss"
+output: html_notebook
 ---
 
-```{r, include = FALSE}
+<!-- output: rmarkdown::html_vignette -->
+<!-- vignette: > -->
+<!--   %\VignetteIndexEntry{test} -->
+<!--   %\VignetteEngine{knitr::rmarkdown} -->
+<!--   %\VignetteEncoding{UTF-8} -->
+
+
+```{r KnitR config, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
-  comment = "#>"
+  comment = "#>",
+  warning = FALSE,
+  message = FALSE
 )
+
+# save all figures of the Rmd as png and pdf in the figures directory
+figure_directory = "figures/"
+if(!dir.exists(figure_directory)) dir.create(figure_directory)
+knitr::opts_chunk$set(dev = c("png", "pdf"), fig.path = figure_directory)
 ```
 
-# Tasks
 
-1. download ChEA3 libraries  
-2. convert gmt-file into table  
-3. visualise TF-coverage overlap between different libraries  
 
 # Setup packages
 
-```{r Setup}
+To run this Rmarkdown, the packages `tidyverse` and `UpSetR` are required.
+
+```{r Setup, include = FALSE}
 library(tidyverse)
+library(UpSetR)
 ```
 
 # Curation of the libraries
 
-## Download ChEA3 libraries
+## Download all six ChEA3 libraries
 
 See Downloads on [ChEA3 website](https://amp.pharm.mssm.edu/chea3/).
 
-```{r Downoad libraries}
+```{r Downoad libraries, include =FALSE}
 archs4 <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/ARCHS4_Coexpression.gmt", delim = "\t", col_names = FALSE)
 encode <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/ENCODE_ChIP-seq.gmt", delim = "\t", col_names = FALSE)
 enrichr <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/Enrichr_Queries.gmt", delim = "\t", col_names = FALSE)
@@ -41,7 +51,8 @@ literature <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/Literat
 remap <- read_delim("https://amp.pharm.mssm.edu/chea3/assets/tflibs/ReMap_ChIP-seq.gmt", delim = "\t", col_names = FALSE)
 ```
 
-Rename TF column and filter out human TFs if necessary.
+In all libraries the TF column was renamed. In the *encode* and *literature* 
+library human were extracted.
 
 ```{r Rename and filter}
 archs4 <- archs4 %>% 
@@ -85,7 +96,6 @@ interaction_table <- function(library, interaction_library, confidence) {
     return(interaction_library)
 }
 
-
 # Apply function to build interaction tables
 archs4_interactions <- interaction_table(archs4, archs4_interactions, "archs4_coexpression")
 encode_interactions <- interaction_table(encode, encode_interactions, "encode_chip-seq")
@@ -96,12 +106,84 @@ remap_interactions <- interaction_table(remap, remap_interactions, "remap_chip-s
 
 libs <- list(archs4_interactions, encode_interactions, enrichr_interactions, gtex_interactions, literature_interactions, remap_interactions)
 
-combined_libs <- map_dfr(libs, function(lib) {
+# Unite all libraries in one table
+libs_combined <- map_dfr(libs, function(lib) {
   lib <- lib %>% arrange(tf, target)
 })
+```
 
-grouped_libs <- group_by(combined_libs, tf, target)
-
+```{r Alternative solution, eval = FALSE}
+# Faster way from Christian
+paths = c("https://amp.pharm.mssm.edu/chea3/assets/tflibs/ARCHS4_Coexpression.gmt",
+          "https://amp.pharm.mssm.edu/chea3/assets/tflibs/ENCODE_ChIP-seq.gmt",
+          "https://amp.pharm.mssm.edu/chea3/assets/tflibs/Enrichr_Queries.gmt",
+          "https://amp.pharm.mssm.edu/chea3/assets/tflibs/GTEx_Coexpression.gmt",
+          "https://amp.pharm.mssm.edu/chea3/assets/tflibs/Literature_ChIP-seq.gmt",
+          "https://amp.pharm.mssm.edu/chea3/assets/tflibs/ReMap_ChIP-seq.gmt")
+map(paths, function(path) {
+    # load file in gmt format
+    df = read_delim(path, delim = "\t", col_names = FALSE)
+    # extract library name from file path
+    lib = path %>%
+        basename() %>%
+        str_remove(".gmt") %>%
+        str_to_lower() %>%
+        str_replace("-", "_")
+    # tidy gmt file
+    tidy_df = df %>%
+        rename(tf = X1) %>%
+        separate(tf, into = c("tf"), sep="_", extra = "drop") %>%
+        pivot_longer(-tf, names_to = "key", values_to = "target") %>%
+        select(-key) %>%
+        mutate(confidence = lib)
+})
 ```
 
 
+## Visualisation of TFs and interactions across the different libraries
+
+```{r Tile plot, eval = FALSE}
+# Group and summarise libraries
+# Group by TFs
+tf_grouped_libs <- group_by(libs_combined, tf)
+summary_tf <- summarise(tf_grouped_libs, lib = unique(confidence)) %>% 
+  summarise(lib, counts = n())
+
+# Plot distributions of TFs in the different libraries
+# Tile plot
+ggplot(summary_tf, aes(x = reorder(tf, -counts), y = reorder(lib, -counts), fill = counts)) + 
+  geom_tile() +
+  xlab("TFs") +
+  ylab("libraries")
+```
+
+
+```{r Upset plot, echo = TRUE}
+# Split by confidence and name each sub-list after lib
+conf_grouped_libs <- group_by(libs_combined, confidence) %>% 
+  select(-target) %>%  # remove target column
+  group_split(keep=FALSE)  # drop group coulumn
+names(conf_grouped_libs) <- c("ARCHS4 Coexpression", "ENCODE ChIP-seq", "Enrichr Queries", "GTEx Coexpression", "Literature ChIP-seq", "ReMap ChIP-seq")
+
+# Convert nested list into list of vectors (accepted form for upset())
+upset_input <- map(conf_grouped_libs, function(lib) {
+  lib %>% pull()
+})
+
+# Create upset plot
+upset(fromList(upset_input), 
+      nsets = 6, 
+      order.by = "freq",
+      mainbar.y.label = "TFs",
+      sets.x.label = "Library Size"
+      )
+```
+
+
+## Session Info
+
+This document was processed on: `r Sys.Date()`.
+
+```{r}
+sessionInfo()
+```
