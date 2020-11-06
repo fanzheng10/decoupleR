@@ -39,7 +39,7 @@ Imports:
     tidyselect,
     GSVA,
     speedglm,
-    fgsea
+    fgsea (>= 1.15.4)
 Suggests: 
     covr,
     knitr,
@@ -52,3 +52,5 @@ VignetteBuilder:
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.1
+Remotes:  
+    ctlab/fgsea
