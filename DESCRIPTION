@@ -38,7 +38,8 @@ Imports:
     viper,
     tidyselect,
     GSVA,
-    speedglm
+    speedglm,
+    fgsea
 Suggests: 
     covr,
     knitr,

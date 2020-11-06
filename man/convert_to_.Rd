@@ -7,6 +7,7 @@
 \alias{convert_to_mean}
 \alias{convert_to_viper}
 \alias{convert_to_gsva}
+\alias{convert_to_fgsea}
 \title{Convert data sets to run under the method of interest.}
 \usage{
 convert_to_(dataset, ...)
@@ -20,6 +21,8 @@ convert_to_mean(dataset, .source, .target, .mor = NULL, .likelihood = NULL)
 convert_to_viper(dataset, .source, .target, .mor = NULL, .likelihood = NULL)
 
 convert_to_gsva(dataset, .source, .target)
+
+convert_to_fgsea(dataset, .source, .target)
 }
 \arguments{
 \item{dataset}{A data frame or data frame extension (e.g. a tibble) to convert.}
