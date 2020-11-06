@@ -26,7 +26,8 @@ test_that("decouple same results as independent functions", {
     "pscira",
     "mean",
     "viper",
-    "gsva"
+    "gsva",
+    "fgsea"
   )
 
   # Choose the same defaults as in the section on generating expected results.
@@ -41,7 +42,8 @@ test_that("decouple same results as independent functions", {
       pscira = list(),
       mean = list(.likelihood = NULL),
       viper = list(options = list(verbose = FALSE)),
-      gsva = list(options = list(verbose = FALSE))
+      gsva = list(options = list(verbose = FALSE)),
+      fgsea = list(options = list())
     )
   ) %>%
     dplyr::select(-.data$run_id) %>%

@@ -39,7 +39,8 @@ decouple <- function(mat,
     scira = run_scira,
     pscira = run_pscira,
     viper = run_viper,
-    gsva = run_gsva
+    gsva = run_gsva,
+    fgsea = run_fgsea
   )
 
   statistics <- statistics %>%
