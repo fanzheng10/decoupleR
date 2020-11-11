@@ -416,57 +416,61 @@ bench_test <- design_tibble %>%
                                      net_bln, expr_bln, meta_bln){
 
     # Check conditions and load prerequisites
-    network <- dorothea_genesets %>%
+    if(!net_bln){
+      .GlobalEnv$network <- readRDS(net_loc)
+    }
+    if(!expr_bln){
+      .GlobalEnv$gene_expression <- readRDS(bnch_expr) %>% as.matrix()
+    }
+    if(!meta_bln){
+      .GlobalEnv$meta_data <- readRDS(bench_meta)
+    }
+
+    # filter network
+    network_filtered <- network %>%
       dplyr::filter(confidence %in% regs)
 
-    # Obtain Activity with decouple
-    decouple(mat = gene_expression, network = network,
+    # Obtain Activity with decouple and format
+    decouple(mat = gene_expression, network = network_filtered,
              .source = all_of(gene_source), .target = target,
              statistics = statistics,
-             .options = list(
-               scira = list(),
-               pscira = list(),
-               mean = list(.likelihood = NULL),
-               viper = list(options = list(verbose = FALSE, minsize=0)),
-               gsva = list(options = list(verbose = FALSE))
-             )) %>%
+             .options = opts) %>%
+      dplyr::rename(id=condition) %>%
+      inner_join(meta_data, by="id") %>%
       dplyr::select(-c(.data$run_id, .data$p_value)) %>%
-      dplyr::rename(id=condition)
+      group_split(statistic, .keep=T) %>%
+      as.list()
   }))
+bench_test$activity[[1]]
 
-
-
-# format tibble and calculate ROC
+# format bench_test
 bench_test2 <- bench_test %>%
-  mutate(statistics = list(levels(as.factor(activity[[1]]$statistic))))  %>%
-  mutate(activity = activity %>%
-           map(function(tib) tib %>%
-                 inner_join(meta_data, by="id") %>%
-                 group_split(statistic, .keep=F) %>%
-                 as.list()
-           )) %>%
+  rowwise() %>%
+  dplyr::mutate(statistics =
+                  list(flatten_chr(.$activity[[1]] %>%
+                                     map(function(tib)
+                                       unique((tib)$statistic))))) %>%
   unnest(c(activity, statistics)) %>%
   rowwise() %>%
   mutate(name = paste(name, statistics,
-                      paste0(regs, collapse = ""),
-                      sep = "_")) %>%
+                      sep = "_", (paste(unlist(regs), collapse = "")))) %>%
   ungroup() %>%
-  mutate(roc = activity %>% map(calc_roc_curve))
+  mutate(roc = activity %>% map(calc_roc_curve)) %>%
+  select(name, activity, roc)
+bench_test2
 
 
 
 # Get roc results
 library(ggplot2)
-bench_dt_plots <- plot_roc_auroc(bench_test2, title = "", coverage = TRUE)
-bench_dt_plots$auroc_plot
-
-
-bench_dt_plots$coverage
-bench_dt_plots$roc_plot
-bench_dt_plots$auroc_plot
-
-# 3.x Then save object with results and summary ----
+bench_dt_plots <- plot_roc_auroc(bench_test2,
+                                 title = "",
+                                 coverage = TRUE)
 
 
 
-
+# 3.4 Then save object with results and summary ----
+out <- list(bench_test2, bench_dt_plots)
+names(out) <- c("benchmark", "plots")
+out$benchmark
+out$plots
