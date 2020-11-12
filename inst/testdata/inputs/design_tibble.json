@@ -1,0 +1,22 @@
+[
+  {
+    "name": "chEA3",
+    "net_loc": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/ChEA3/ChEA3_realTFs_only.RDS",
+    "regs": "literature_chip_seq",
+    "gene_source": "tf",
+    "target": "target",
+    "statistics": ["scira", "pscira", "mean", "viper", "gsva"],
+    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_example.rds",
+    "bench_meta": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_meta.rds"
+  },
+  {
+    "name": "chEA3",
+    "net_loc": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/ChEA3/ChEA3_realTFs_only.RDS",
+    "regs": "remap_chip_seq",
+    "gene_source": "tf",
+    "target": "target",
+    "statistics": ["scira", "pscira", "mean", "viper", "gsva"],
+    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_example.rds",
+    "bench_meta": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_meta.rds"
+  }
+]

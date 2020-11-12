@@ -3,8 +3,6 @@
 #' @param df run_method_viper() output
 #' @return tidy data frame containing recall, precision, auc, tp, tn and
 #'   coverage
-#'
-
 calc_pr_curve = function(df) {
   library(ggplot2)
 
@@ -43,7 +41,6 @@ calc_pr_curve = function(df) {
 #' @return tidy data frame with tpr, fpr, auc, n, tp, tn and coverage
 #'
 #' @import yardstick
-
 calc_roc_curve = function(df, downsampling = F, times = 1000, ranked = F) {
 
   library(yardstick)
@@ -123,7 +120,6 @@ calc_roc_curve = function(df, downsampling = F, times = 1000, ranked = F) {
 #'
 #' @return tidy data frame with meta information for each experiment and the
 #'   response and the predictor value which are required for roc curve analysis
-
 prepare_for_roc = function(df, filter_tn = F, ranked = F) {
   res = df %>%
     dplyr::mutate(response = case_when(tf == target ~ 1,
@@ -151,8 +147,7 @@ prepare_for_roc = function(df, filter_tn = F, ranked = F) {
 #' @param title character string for title of plots
 #' @param coverage print TF coverage (TRUE/FALSE)
 #' @return TF coverage (optional), ROC and AUROC plot
-
-plot_roc_auroc <- function(data, title, coverage = FALSE) {
+bench_sumplot <- function(data, title, coverage = FALSE) {
 
   roc <- apply(data, 1, function(df) {
     mutate(df$roc, name = df$name)
@@ -177,14 +172,10 @@ plot_roc_auroc <- function(data, title, coverage = FALSE) {
     ylab("TPR (sensitivity)")
 
   # Extract AUROC
-  auroc <- apply(data, 1, function(df)
-    mutate(df$roc,
-           name = df$name)
-    ) %>%
-    do.call(rbind, .) %>%
-    group_by(name) %>%
-    summarize(auroc = unique(auc)) %>%
-    arrange(auroc)
+  auroc <- data %>%
+    unnest(roc) %>%
+    select(name, confidence = regs, statistics, auroc = auc) %>%
+    distinct()
 
   # Plot AUROC
   auroc_plot <- ggplot(auroc, aes(x = reorder(name, auroc), y = auroc, fill = name)) +
@@ -195,9 +186,20 @@ plot_roc_auroc <- function(data, title, coverage = FALSE) {
     coord_flip(ylim = c(0.5, 0.8)) +
     theme(legend.position = "none")
 
-  out <- list(cov, roc_plot, auroc_plot)
-  names(out) <- c("coverage", "roc_plot", "auroc_plot")
+  # Plot AUROC heat
+  auroc_heat <- auroc %>%
+    select(statistics, auroc, confidence) %>%
+    pivot_wider(names_from = statistics, values_from = auroc) %>%
+    column_to_rownames(var = "confidence") %>%
+    pheatmap(.,
+             cluster_rows = F,
+             treeheight_col = 0,
+             treeheight_row = 0)
+
+
+  out <- list(auroc ,cov, roc_plot, auroc_plot, auroc_heat)
+  names(out) <- c("auroc", "coverage", "roc_plot", "auroc_plot", "auroc_heat")
 
   return(out)
-
 }
+

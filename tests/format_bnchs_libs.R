@@ -122,6 +122,12 @@ load_chea3 <- function(confidence_list, source = "local") {
 }
 
 
+
+
+# get chEA3 network
+chea3_network <- load_chea3("all")
+head(chea3_network)
+
 # List of real TFs
 tf_list <- read_delim(here("inst/testdata/inputs/",
                            "TF_annotations_Lambert_2018.csv"),
@@ -129,10 +135,6 @@ tf_list <- read_delim(here("inst/testdata/inputs/",
   select(tf = Name, real = "Is TF?") %>%
   mutate(real = ifelse(real == "Yes", TRUE, FALSE))
 head(tf_list)
-
-# get chEA3 network
-chea3_network <- load_chea3("all")
-head(chea3_network)
 
 # Filter putative TFs
 tfs_true <- tf_list %>% filter(real == TRUE) %>% pull(tf)
@@ -146,3 +148,60 @@ head(chea3_network_filtered)
 # Save ChEA3 network
 saveRDS(chea3_network_filtered, here("inst/testdata/inputs/ChEA3",
                                      "ChEA3_realTFs_only.RDS"))
+
+chea3_network <-readRDS(here("inst/testdata/inputs/ChEA3",
+                              "ChEA3_realTFs_only.RDS"))
+head(chea3_network)
+
+
+
+# 2.2 RegNetwork ----
+# load human regulons from RegNetwork
+high_confidence = read.csv(here("inst/testdata/inputs/regnetwork",
+                                "high_confidence.csv"), header = T)
+medium_confidence = read.csv(here("inst/testdata/inputs/regnetwork",
+                                  "medium_confidence.csv"), header = T)
+low_confidence = read.csv(here("inst/testdata/inputs/regnetwork",
+                               "low_confidence.csv"), header = T)
+
+# bind and format
+reg_network = rbind(high_confidence, medium_confidence, low_confidence) %>%
+  filter(!str_detect(regulator_symbol, "miR|mir|hsa")) %>%
+  filter(!str_detect(target_symbol, "miR|mir|hsa")) %>%
+  rename(tf = regulator_symbol, target = target_symbol) %>%
+  mutate(likelihood = 1, mor = 1) %>%
+  select(tf, target, confidence,  likelihood, mor)
+head(reg_network)
+
+# List of real TFs
+tf_list <- read_delim(here("inst/testdata/inputs/",
+                           "TF_annotations_Lambert_2018.csv"),
+                      delim = ";") %>%
+  select(tf = Name, real = "Is TF?") %>%
+  mutate(real = ifelse(real == "Yes", TRUE, FALSE))
+head(tf_list)
+
+# Filter putative TFs
+tfs_true <- tf_list %>%
+  filter(real == TRUE) %>%
+  pull(tf)
+length(tfs_true)
+head(tfs_true)
+
+# Obtain real TFs and regulons with size >= 5
+reg_network_realTFs <- reg_network %>%
+  filter((tf %in% tfs_true))%>%
+  group_by(tf, confidence) %>%
+  add_count() %>%
+  filter(n >= 10)
+  # select(-n) %>%
+  # ungroup() %>%
+  # distinct()
+
+
+length(unique(reg_network$tf))
+length(unique(reg_network_realTFs$tf))
+
+
+saveRDS(reg_network_realTFs, here("inst/testdata/inputs/regnetwork",
+        "regnework_realTFs_only.rds"))

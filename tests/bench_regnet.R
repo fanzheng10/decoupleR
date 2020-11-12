@@ -1,20 +1,19 @@
 library(here)
 # Load Prerequisites ----
 # Locations for the network resource, benchmark gene expression, and meta data
-net_loc <- here("inst/testdata/inputs/ChEA3", "ChEA3_realTFs_only.RDS")
+net_loc <- here("inst/testdata/inputs/regnetwork", "regnework_realTFs_only.rds")
 # bench_expr <- here("inst/testdata/inputs", "knockTF_ex.rds")
 # bench_meta <- here("inst/testdata/inputs", "knockTF_meta.rds")
 bench_expr <- here("inst/testdata/inputs", "input-dorothea_bench_example.rds")
 bench_meta <- here("inst/testdata/inputs", "input-dorothea_bench_meta.rds")
 
 # Libraries/Confidence levels in each gene set (or anything that )
-regs <- c("archs4_coexpression", "encode_chip_seq", "enrichr_queries",
-          "gtex_coexpression", "literature_chip_seq", "remap_chip_seq")
+regs <- c("High", "Medium", "Low")
 
 # Statistics
 statistics <- c(
-  "scira",
-  "pscira",
+ "scira",
+ "pscira",
   "mean",
   "viper",
   "gsva"
@@ -29,45 +28,24 @@ opts <- list(
   gsva = list(options = list(verbose = FALSE))
 )
 
-
+# Design
 design_tibble = tribble(
   ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta, ~opts,
-  "chEA3", net_loc, regs[1], "tf", "target", statistics, bench_expr, bench_meta, opts,
-  "chEA3", net_loc, regs[2], "tf", "target", statistics, bench_expr, bench_meta, opts,
-  "chEA3", net_loc, regs[3], "tf", "target", statistics, bench_expr, bench_meta, opts,
-  "chEA3", net_loc, regs[4], "tf", "target", statistics, bench_expr, bench_meta, opts,
-  "chEA3", net_loc, regs[5], "tf", "target", statistics, bench_expr, bench_meta, opts,
-  "chEA3", net_loc, regs[6], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  "regnet", net_loc, regs[1], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  "regnet", net_loc, regs[2], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  "regnet", net_loc, regs[3], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  "regnet", net_loc, regs[1:2], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  "regnet", net_loc, regs[1:3], "tf", "target", statistics, bench_expr, bench_meta, opts,
 )
-design_tibble
-
-# #  Load bench and network data
-# gene_expression <- readRDS(here("inst/testdata/inputs/", "input-dorothea_bench_example.rds")) %>%
-#   as.matrix()
-# meta_data <- readRDS(here("inst/testdata/inputs/", "input-dorothea_bench_meta.rds"))
-# dorothea_genesets <- readRDS(here("inst/testdata/inputs/", "input_dorothea_full.rds"))
 
 
-
-# 3.2 Function that checks preceding vector element ----
-check_prereq <- function(loc_vector){
-  loc_tib <- tibble(current=loc_vector, behind=lag(loc_vector))
-
-  pmap_lgl(loc_tib, function(behind, current){
-    if(is.na(behind) || behind!=current){
-      FALSE
-    } else{
-      TRUE
-    }
-  })
-}
-
-# Check prereq
+# 3.2 Check prereq
 design_tibble <- design_tibble %>%
   mutate(net_bln = net_loc %>% check_prereq(),
          expr_bln = bnch_expr %>% check_prereq(),
          meta_bln = bench_meta %>% check_prereq())
 design_tibble
+
 
 # 3.3 Test with redesigned design tibble ----
 bench_test <- design_tibble %>%
@@ -137,4 +115,4 @@ names(out) <- c("benchmark", "plots")
 out$benchmark
 out$plots$auroc_plot
 
-saveRDS(out, here("inst/testdata/outputs", "chEA3_cbd_results.rds"))
+saveRDS(out, here("inst/testdata/outputs", "regnet_cbd_results.rds"))
