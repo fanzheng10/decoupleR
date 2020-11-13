@@ -116,7 +116,14 @@ saveRDS(meta_expr, here("inst/benchdata/inputs/", "KnockTF_meta_data.rds"))
 rm(list = ls())
 
 # 3. Create Design JSONs ----
-
+statistics <- c(
+  "mean",
+  "pscira",
+  "scira",
+  "viper",
+  "gsva",
+  "fgsea"
+)
 
 
 

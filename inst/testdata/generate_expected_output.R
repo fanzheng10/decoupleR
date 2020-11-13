@@ -17,7 +17,8 @@ available_statistics <- c(
   "pscira",
   "scira",
   "viper",
-  "gsva"
+  "gsva",
+  "fgsea"
 )
 
 out <- available_statistics %>%
@@ -103,7 +104,18 @@ run_gsva(emat, dorothea_genesets, tf, target) %>%
 run_gsva(emat, dorothea_genesets, options = list(min.sz = 4)) %>%
   saveRDS(file.path(out$gsva, "output-gsva_dorothea_minsize4.rds"))
 
-# decouple() --------------------------------------------------------------
+#---- run_fgsea() --------------------------------------------------------------
+
+run_fgsea(emat, dorothea_genesets) %>%
+  saveRDS(out_default$fgsea)
+
+run_fgsea(emat, dorothea_genesets, tf, target) %>%
+  saveRDS(file.path(out$fgsea, "output-fgsea_dorothea_tidy-evaluation.rds"))
+
+run_fgsea(emat, dorothea_genesets, options = list(minSize = 4)) %>%
+  saveRDS(file.path(out$fgsea, "output-fgsea_dorothea_minsize4.rds"))
+
+# decouple() -----------s---------------------------------------------------
 # This section should be kept at the end of the file
 # and should be executed every time a new statistic
 # is added or any entry of the default models is modified.
