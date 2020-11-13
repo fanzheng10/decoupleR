@@ -1,14 +1,26 @@
 library(here)
+library(tidyverse)
+
 # Load Prerequisites ----
 # Locations for the network resource, benchmark gene expression, and meta data
 net_loc <- here("inst/testdata/inputs/regnetwork", "regnework_realTFs_only.rds")
 # bench_expr <- here("inst/testdata/inputs", "knockTF_ex.rds")
 # bench_meta <- here("inst/testdata/inputs", "knockTF_meta.rds")
-bench_expr <- here("inst/testdata/inputs", "input-dorothea_bench_example.rds")
+bench_expr <- here("inst/testdata/inputs", "input-dorothea_bench_expr.rds")
 bench_meta <- here("inst/testdata/inputs", "input-dorothea_bench_meta.rds")
 
 # Libraries/Confidence levels in each gene set (or anything that )
 regs <- c("High", "Medium", "Low")
+
+
+net_loc2 <- here("inst/testdata/inputs/ChEA3", "ChEA3_realTFs_only.RDS")
+
+
+
+# regnet <- readRDS(net_loc)
+# chea3net <- readRDS(net_loc2)
+# head(chea3net)
+# head(network)
 
 # Statistics
 statistics <- c(
@@ -27,15 +39,19 @@ opts <- list(
   viper = list(options = list(verbose = FALSE, minsize=4)),
   gsva = list(options = list(verbose = FALSE))
 )
+class(c(regs[1], regs[2]))
+class()
+class(regs[1:2])
 
 # Design
 design_tibble = tribble(
   ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta, ~opts,
-  "regnet", net_loc, regs[1], "tf", "target", statistics, bench_expr, bench_meta, opts,
-  "regnet", net_loc, regs[2], "tf", "target", statistics, bench_expr, bench_meta, opts,
-  "regnet", net_loc, regs[3], "tf", "target", statistics, bench_expr, bench_meta, opts,
-  "regnet", net_loc, regs[1:2], "tf", "target", statistics, bench_expr, bench_meta, opts,
-  "regnet", net_loc, regs[1:3], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  # "regnet", net_loc, regs[1], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  # "regnet", net_loc, regs[2], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  # "regnet", net_loc, regs[3], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  "regnet", net_loc, c("High", "Medium"), "tf", "target", statistics, bench_expr, bench_meta, opts,
+  # "regnet", net_loc, regs[1:3], "tf", "target", statistics, bench_expr, bench_meta, opts,
+  # "chEA3", net_loc2, "remap_chip_seq", "tf", "target", statistics, bench_expr, bench_meta, opts,
 )
 
 
@@ -81,7 +97,12 @@ bench_test <- design_tibble %>%
       group_split(statistic, .keep=T) %>%
       as.list()
   }))
-bench_test
+
+
+
+
+
+
 
 # format bench_test
 bench_test2 <- bench_test %>%
@@ -97,13 +118,13 @@ bench_test2 <- bench_test %>%
   ungroup() %>%
   mutate(roc = activity %>% map(calc_roc_curve)) %>%
   select(name, activity, roc)
-bench_test2
+bench_test2$r
 
 
 
 # Get roc results
 library(ggplot2)
-bench_dt_plots <- plot_roc_auroc(bench_test2,
+bench_dt_plots <- bench_sumplot(bench_test2,
                                  title = "",
                                  coverage = TRUE)
 

@@ -188,13 +188,15 @@ bench_sumplot <- function(data, title, coverage = FALSE) {
 
   # Plot AUROC heat
   auroc_heat <- auroc %>%
+    unite(name, confidence, col="confidence") %>%
     select(statistics, auroc, confidence) %>%
-    pivot_wider(names_from = statistics, values_from = auroc) %>%
-    column_to_rownames(var = "confidence") %>%
+    pivot_wider(names_from = confidence, values_from = auroc) %>%
+    column_to_rownames(var = "statistics") %>%
     pheatmap(.,
              cluster_rows = F,
              treeheight_col = 0,
-             treeheight_row = 0)
+             treeheight_row = 0,
+             display_numbers = T)
 
 
   out <- list(auroc ,cov, roc_plot, auroc_plot, auroc_heat)

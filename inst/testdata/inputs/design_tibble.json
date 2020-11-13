@@ -1,22 +1,62 @@
 [
   {
-    "name": "chEA3",
-    "net_loc": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/ChEA3/ChEA3_realTFs_only.RDS",
-    "regs": "literature_chip_seq",
+    "name": "dorothea_knock",
+    "net_loc": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input_dorothea_full.rds",
+    "regs": "A",
     "gene_source": "tf",
     "target": "target",
     "statistics": ["scira", "pscira", "mean", "viper", "gsva"],
-    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_example.rds",
+    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/knockTF_gene_expr.rds",
+    "bench_meta": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/knockTF_meta.rds"
+  },
+  {
+    "name": "dorothea_dbm",
+    "net_loc": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input_dorothea_full.rds",
+    "regs": "A",
+    "gene_source": "tf",
+    "target": "target",
+    "statistics": ["scira", "pscira", "mean", "viper", "gsva"],
+    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_expr.rds",
     "bench_meta": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_meta.rds"
   },
   {
-    "name": "chEA3",
+    "name": "chEA3_knock",
     "net_loc": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/ChEA3/ChEA3_realTFs_only.RDS",
     "regs": "remap_chip_seq",
     "gene_source": "tf",
     "target": "target",
     "statistics": ["scira", "pscira", "mean", "viper", "gsva"],
-    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_example.rds",
+    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/knockTF_gene_expr.rds",
+    "bench_meta": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/knockTF_meta.rds"
+  },
+  {
+    "name": "chEA3_dbm",
+    "net_loc": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/ChEA3/ChEA3_realTFs_only.RDS",
+    "regs": "remap_chip_seq",
+    "gene_source": "tf",
+    "target": "target",
+    "statistics": ["scira", "pscira", "mean", "viper", "gsva"],
+    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_expr.rds",
+    "bench_meta": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_meta.rds"
+  },
+  {
+    "name": "regnet_knock",
+    "net_loc": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/regnetwork/regnework_realTFs_only.rds",
+    "regs": "High",
+    "gene_source": "tf",
+    "target": "target",
+    "statistics": ["scira", "pscira", "mean", "viper", "gsva"],
+    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/knockTF_gene_expr.rds",
+    "bench_meta": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/knockTF_meta.rds"
+  },
+  {
+    "name": "regnet_dbm",
+    "net_loc": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/regnetwork/regnework_realTFs_only.rds",
+    "regs": "High",
+    "gene_source": "tf",
+    "target": "target",
+    "statistics": ["scira", "pscira", "mean", "viper", "gsva"],
+    "bnch_expr": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_expr.rds",
     "bench_meta": "/home/dbdimitrov/Repos/decoupleR/inst/testdata/inputs/input-dorothea_bench_meta.rds"
   }
 ]
