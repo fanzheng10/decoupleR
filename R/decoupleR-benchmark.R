@@ -1,13 +1,26 @@
-#' Load Design from JSON file
-#' @param design_loc
+#' Benchmark Wrapper Function
+#'
+#' @inheritParams bench_couple
+#' @import jsonlite
+#' @export
+run_benchmark <- function(design_loc, opts){
+  res <- load_design(design_loc) %>%
+    bench_couple(., opts) %>%
+    bench_format()
+  return(res)
+}
+
+
+#' Load Design from JSON file and Format
+#'
+#' @param design_loc location of a json file with run design specifications
 #' @return a design tibble to be used in benchmarking
 load_design <- function(design_loc){
-  library(jsonlite)
   # load JSON
   design <- fromJSON(design_loc) %>%
     as_tibble()
 
-  # check prerequisites
+  # Check prerequisites
   design <- design %>%
     mutate(net_bln = net_loc %>% check_prereq(),
            expr_bln = bnch_expr %>% check_prereq(),
@@ -15,10 +28,13 @@ load_design <- function(design_loc){
   return(design)
 }
 
-#' Function that checks ifthe  preceding vector element is the same
+#' Function that checks if the  preceding vector element is the same
 #' as the current element
+#'
 #' @param vector_loc char vector with directories
-#' @return logical value
+#' @return logical values describing whether the location of the loaded files
+#' has changes
+#' @export
 check_prereq <- function(vector_loc){
   tib_loc <- tibble(current=vector_loc, behind=lag(vector_loc))
 
@@ -29,10 +45,11 @@ check_prereq <- function(vector_loc){
 
 
 #' Benchmark gene sets with decouple
-#' @param design_tibble tibble with design specifications
+#'
+#' @inheritParams load_design
 #' @param opts options for each stats method. Note that this list should match
 #' the statistics passed to .f decouple
-#' @retun A tibble with an appended activity column that corresponds
+#' @return A tibble with an appended activity column that corresponds
 #' to the activities calculated for each row of the design tibble
 bench_couple <- function(design_tibble, opts){
   res <- design_tibble %>%
@@ -74,6 +91,7 @@ bench_couple <- function(design_tibble, opts){
 
 
 #' Function to format benchmarking results
+#'
 #' @param bench_res benchmarking results
 #' @returns formatted benchmarking results
 bench_format <- function(bench_res){
@@ -84,9 +102,6 @@ bench_format <- function(bench_res){
                                        map(function(tib)
                                          unique((tib)$statistic))))) %>%
     unnest(c(activity, statistics)) %>%
-    # rowwise() %>%
-    # unite(name, regs, sep="_", col="name") %>%
-    # ungroup()  %>%
     select(name, regs, statistics, activity)
   return(res_format)
 }

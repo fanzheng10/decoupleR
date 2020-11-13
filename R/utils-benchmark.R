@@ -1,10 +1,9 @@
 #' This function calculates precision recall curves
 #'
 #' @param df run_method_viper() output
-#' @return tidy data frame containing recall, precision, auc, tp, tn and
-#'   coverage
+#' @return tidy df containing recall, precision, auc, tp, tn and coverage
 calc_pr_curve = function(df) {
-  library(ggplot2)
+
 
   df = df %>% prepare_for_roc(., filter_tn = T)
 
@@ -146,8 +145,9 @@ prepare_for_roc = function(df, filter_tn = F, ranked = F) {
 #' @param data
 #' @param title character string for title of plots
 #' @param coverage print TF coverage (TRUE/FALSE)
-#' @return TF coverage (optional), ROC and AUROC plot
-bench_sumplot <- function(data, title, coverage = FALSE) {
+#' @return AUROC, TF coverage (optional), ROC AUROC, Heatmap plots
+#' @import ggplot2, pheatmap
+bench_sumplot <- function(data, title) {
 
   roc <- apply(data, 1, function(df) {
     mutate(df$roc, name = df$name)
@@ -155,13 +155,11 @@ bench_sumplot <- function(data, title, coverage = FALSE) {
     do.call(rbind, .)
 
   # TF Coverage
-  if (coverage == TRUE) {
-    cov <- roc %>%
-      group_by(name) %>%
-      summarise(coverage) %>%
-      distinct() %>%
-      arrange(-coverage)
-  }
+  cov <- roc %>%
+    group_by(name) %>%
+    summarise(coverage) %>%
+    distinct() %>%
+    arrange(-coverage)
 
   # Plot ROC
   roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = name)) +
