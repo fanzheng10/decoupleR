@@ -3,8 +3,6 @@
 #' @param df run_method_viper() output
 #' @return tidy df containing recall, precision, auc, tp, tn and coverage
 calc_pr_curve = function(df) {
-
-
   df = df %>% prepare_for_roc(., filter_tn = T)
 
   feature_coverage = length(unique(df$tf))

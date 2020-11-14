@@ -1,58 +1,13 @@
-#' Benchmark Wrapper Function
-#'
-#' @inheritParams bench_couple
-#' @import jsonlite
-#' @export
-run_benchmark <- function(design_loc, opts){
-  res <- load_design(design_loc) %>%
-    bench_couple(., opts) %>%
-    bench_format()
-  return(res)
-}
-
-
-#' Load Design from JSON file and Format
-#'
-#' @param design_loc location of a json file with run design specifications
-#' @return a design tibble to be used in benchmarking
-load_design <- function(design_loc){
-  # load JSON
-  design <- fromJSON(design_loc) %>%
-    as_tibble()
-
-  # Check prerequisites
-  design <- design %>%
-    mutate(net_bln = net_loc %>% check_prereq(),
-           expr_bln = bnch_expr %>% check_prereq(),
-           meta_bln = bench_meta %>% check_prereq())
-  return(design)
-}
-
-#' Function that checks if the  preceding vector element is the same
-#' as the current element
-#'
-#' @param vector_loc char vector with directories
-#' @return logical values describing whether the location of the loaded files
-#' has changes
-#' @export
-check_prereq <- function(vector_loc){
-  tib_loc <- tibble(current=vector_loc, behind=lag(vector_loc))
-
-  pmap_lgl(tib_loc, function(behind, current){
-    ifelse(is.na(behind) || behind!=current, FALSE, TRUE)
-  })
-}
-
-
 #' Benchmark gene sets with decouple
 #'
 #' @inheritParams load_design
+#' @param save_loc location in which each row is saved
 #' @param opts options for each stats method. Note that this list should match
 #' the statistics passed to .f decouple
 #' @return A tibble with an appended activity column that corresponds
 #' to the activities calculated for each row of the design tibble
-bench_couple <- function(design_tibble, opts){
-  res <- design_tibble %>%
+run_benchmark <- function(design_loc, opts){
+  res <- load_design(design_loc) %>%
     mutate(activity = pmap(., function(name, net_loc, regs,
                                        gene_source, target, statistics,
                                        bnch_expr, bench_meta,
@@ -84,9 +39,40 @@ bench_couple <- function(design_tibble, opts){
         dplyr::select(-c(.data$run_id, .data$p_value)) %>%
         group_split(statistic, .keep=T) %>%
         as.list()
-    }))
+    })) %>%
+    bench_format()
 
   return(res)
+}
+
+
+#' Load Design from JSON file and Format
+#'
+#' @param design_loc location of a json file with run design specifications
+#' @return a design tibble to be used in benchmarking
+load_design <- function(design_loc){
+  # load RDS
+  design <- readRDS(design_loc) %>%
+    mutate(net_bln = net_loc %>% check_prereq(),
+           expr_bln = bnch_expr %>% check_prereq(),
+           meta_bln = bench_meta %>% check_prereq())
+  return(design)
+}
+
+
+#' Function that checks if the  preceding vector element is the same
+#' as the current element
+#'
+#' @param vector_loc char vector with directories
+#' @return logical values describing whether the location of the loaded files
+#' has changes
+#' @export
+check_prereq <- function(vector_loc){
+  tib_loc <- tibble(current=vector_loc, behind=lag(vector_loc))
+
+  pmap_lgl(tib_loc, function(behind, current){
+    ifelse(is.na(behind) || behind!=current, FALSE, TRUE)
+  })
 }
 
 
