@@ -24,10 +24,15 @@ run_benchmark <- function(design_loc, opts){
         .GlobalEnv$meta_data <- readRDS(bench_meta)
       }
 
-      # filter network
-      network_filtered <- network %>%
+      # filter network (to be changed and extended for additional filters)
+      .GlobalEnv$network_filtered <- network %>%
         dplyr::filter(confidence %in% regs) %>%
-        distinct()
+        distinct_at(vars(-confidence)) %>%
+        group_by(tf) %>%
+        add_count() %>%
+        filter(n >= 10) %>%
+        ungroup()
+
 
       # Obtain Activity with decouple and format
       decouple(mat = gene_expression, network = network_filtered,

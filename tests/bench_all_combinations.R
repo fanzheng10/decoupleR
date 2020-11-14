@@ -1,6 +1,7 @@
 # 1. Format libraries in a standardized manner ----
 library(here)
 library(tidyverse)
+library(magrittr)
 
 # Load Real TFs
 tfs_real <- read_delim(here("inst/benchdata/inputs/",
@@ -17,12 +18,7 @@ dorothea_raw <- dorothea::dorothea_hs %>%
 
 # Filter
 dorothea_filtered <- dorothea_raw %>%
-  filter((tf %in% tfs_real)) %>%
-  group_by(tf, confidence) %>%
-  add_count() %>%
-  filter(n >= 10)  %>%
-  select(-n) %>%
-  ungroup()
+  filter((tf %in% tfs_real))
 
 # Save
 saveRDS(dorothea_filtered, here("inst/benchdata/inputs/",
@@ -35,12 +31,7 @@ chea3_raw <- readRDS(here("inst/benchdata/inputs/",
 
 # Filter
 chea3_filtered <- chea3_raw %>%
-  filter((tf %in% tfs_real)) %>%
-  group_by(tf, confidence) %>%
-  add_count() %>%
-  filter(n >= 10) %>%
-  select(-n) %>%
-  ungroup()
+  filter((tf %in% tfs_real))
 
 # Save
 saveRDS(chea3_filtered, here("inst/benchdata/inputs/",
@@ -52,12 +43,8 @@ regnetwork_raw <- readRDS(here("inst/benchdata/inputs/",
                                "networks/regnetwork_raw.rds"))
 
 regnetwork_filtered <- regnetwork_raw %>%
-  filter((tf %in% tfs_real)) %>%
-  group_by(tf, confidence) %>%
-  add_count() %>%
-  filter(n >= 10) %>%
-  select(-n) %>%
-  ungroup()
+  filter((tf %in% tfs_real))
+
 
 saveRDS(regnetwork_filtered, here("inst/benchdata/inputs/",
                              "networks/regnetwork_filtered.rds"))
@@ -120,14 +107,15 @@ saveRDS(meta_expr, here("inst/benchdata/inputs/", "KnockTF_meta.rds"))
 # clear env.
 rm(list = ls())
 
+
 # 3. Create Design JSONs ----
 
 # locations
 # benchmark datasets
-knock_expr <- here("inst/benchdata/inputs", "KnockTF_gene_example.rds")
+knock_expr <- here("inst/benchdata/inputs", "KnockTF_gene_expr.rds")
 knock_meta <- here("inst/benchdata/inputs", "KnockTF_meta.rds")
 
-dbd_expr <- here("inst/benchdata/inputs", "input-dorothea_bench_example.rds")
+dbd_expr <- here("inst/benchdata/inputs", "input-dorothea_bench_expr.rds")
 dbd_meta <- here("inst/benchdata/inputs", "input-dorothea_bench_meta.rds")
 
 # network locations
@@ -141,8 +129,8 @@ statistics <- c(
   "pscira",
   "scira",
   "viper",
-  "gsva" #,
-  # "fgsea"
+  "gsva",
+  "fgsea"
 )
 
 # options
@@ -151,8 +139,8 @@ opts <- list(
   pscira = list(),
   mean = list(),
   viper = list(options = list(verbose = FALSE)),
-  gsva = list(options = list(verbose = FALSE)) #,
-  # fgsea = list(options = list())
+  gsva = list(options = list(verbose = FALSE)),
+  fgsea = list(options = list())
 )
 
 
@@ -161,24 +149,15 @@ regs <- list(c("A"),
           c("A", "B", "C"),
           c("A", "B", "C", "D", "E"))
 
-
 design_tibble = tribble(
   ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta,
   "dorothea_dbd", dorothea_loc, regs[[1]], "tf", "target", statistics, dbd_expr, dbd_meta,
   "dorothea_dbd", dorothea_loc, regs[[2]], "tf", "target", statistics, dbd_expr, dbd_meta,
   "dorothea_dbd", dorothea_loc, regs[[3]], "tf", "target", statistics, dbd_expr, dbd_meta,
   )
-design_tibble
-
-
 
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
                             "dorothea_dbd_design.rds"))
-
-xd <-  run_benchmark(here("inst/benchdata/inputs/designs",
-                          "dorothea_dbd_design.rds"), opts)
-xd
-
 
 # 3.2. Dorothea + Knock_TF Data (KTF) ====
 design_tibble = tribble(
@@ -187,7 +166,6 @@ design_tibble = tribble(
   "dorothea_ktf", dorothea_loc, regs[[2]], "tf", "target", statistics, knock_expr, knock_meta,
   "dorothea_ktf", dorothea_loc, regs[[3]], "tf", "target", statistics, knock_expr, knock_meta,
 )
-design_tibble
 
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
                             "dorothea_ktf_design.rds"))
@@ -206,12 +184,10 @@ design_tibble = tribble(
   "ChEA3_dbd", chea3_loc, ch_regs[[5]], "tf", "target", statistics, dbd_expr, dbd_meta,
   "ChEA3_dbd", chea3_loc, ch_regs[[6]], "tf", "target", statistics, dbd_expr, dbd_meta,
 )
+design_tibble$regs %<>% as.list
 
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
                             "ChEA3_dbd_design.rds"))
-
-xd <- run_benchmark(here("inst/benchdata/inputs/designs",
-                         "ChEA3_dbd_design.rds"), opts)
 
 # 3.4. ChEA3 + KTF ====
 design_tibble = tribble(
@@ -223,9 +199,11 @@ design_tibble = tribble(
   "ChEA3_ktf", chea3_loc, ch_regs[[5]], "tf", "target", statistics, knock_expr, knock_meta,
   "ChEA3_ktf", chea3_loc, ch_regs[[6]], "tf", "target", statistics, knock_expr, knock_meta,
 )
+design_tibble$regs %<>% as.list
 
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
                             "ChEA3_ktf_design.rds"))
+
 
 # 3.5. RegNetwork + DBD ====
 rn_regs <- list(c("High"),
@@ -246,15 +224,63 @@ saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
 # 3.6. RegNetwork + KTF ====
 design_tibble = tribble(
   ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta,
-  "regnet_ktf", regnet_loc, rn_regs[[1]], "tf", "target", statistics, knock_expr, knock_meta,
-  "regnet_ktf", regnet_loc, rn_regs[[2]], "tf", "target", statistics, knock_expr, knock_meta,
-  "regnet_ktf", regnet_loc, rn_regs[[3]], "tf", "target", statistics, knock_expr, knock_meta,
+  "regnet_ktf", regnet_loc,  rn_regs[[1]], "tf", "target", statistics, knock_expr, knock_meta,
+  "regnet_ktf", regnet_loc,   rn_regs[[2]], "tf", "target", statistics, knock_expr, knock_meta,
+  "regnet_ktf", regnet_loc,   rn_regs[[3]], "tf", "target", statistics, knock_expr, knock_meta,
 )
+
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
                             "regnet_ktf_design.rds"))
 
+
+# 3.7. Combine all designs ====
+designs <-
+  list.files(here("inst/benchdata/inputs/designs")) %>%
+  map(function(file_loc)
+    readRDS(here("inst/benchdata/inputs/designs", file_loc))) %>%
+  bind_rows()
+
+saveRDS(designs,
+        here("inst/benchdata/inputs/",
+             "all_combinations.rds"))
+
+designs_ktf <- designs %>%
+  filter(str_detect(name, "ktf"))
+
+saveRDS(designs_ktf,
+        here("inst/benchdata/inputs/",
+             "all_ktf.rds"))
+
+
+designs_dbd <- designs %>%
+  filter(str_detect(name, "dbd"))
+
+
+saveRDS(designs_dbd,
+        here("inst/benchdata/inputs/",
+             "all_dbd.rds"))
+
+
 # 4. Benchmark ----
+opts <- list(
+  scira = list(),
+  pscira = list(),
+  mean = list(),
+  viper = list(options = list(verbose = FALSE)),
+  gsva = list(options = list(verbose = FALSE)),
+  fgsea = list(options = list())
+)
+
+
+
+# 4.2 Run DBD ====
+library(here)
+dbd_all_combs <- run_benchmark(here("inst/benchdata/inputs/",
+                   "all_dbd.rds"), opts)
+
+# 4.3 Run Knock TF ====
 
 
 
 # 5. Summarize and Visualize output ----
+

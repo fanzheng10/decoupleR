@@ -15,8 +15,7 @@ regnetwork = rbind(high_confidence, medium_confidence, low_confidence) %>%
   select(tf, target, confidence,  likelihood, mor)
 head(regnetwork)
 
-data_loc <- "~/PhD/data/decoupleR_bench_data/inputs/networks/"
-saveRDS(regnetwork, paste(data_loc, "regnetwork_raw.rds", sep=""))
+saveRDS(regnetwork, here("inst/benchdata/inputs/", "regnetwork_raw.rds"))
 
 # chEA3
 # 2.1 ChEA3 ----
