@@ -296,20 +296,25 @@ dbd_test_dor_format <- dbd_test_dor %>%
   select(name, statistics, regs, ctime, stime, rtime)
 
 
-# ctime <- dbd_test_dor_format[1,]$ctime
-# rtime1 <- dbd_test_dor_format[1,]$rtime
-# rtime2 <- dbd_test_dor_format[14,]$rtime
-#
-# difftime(rtime1, ctime)
-# difftime(rtime2, rtime1)
-
-
 ctime_value <- unique(dbd_test_dor_format$ctime)
-rtime_vector <- unique(dbd_test_dor_format$rtime)
 
-tibble(current=rtime_vector, behind=lag(rtime_vector))
+# calculate differences
+time_tib <- tibble(start_time=lag(rtime_vector),
+                   end_time=rtime_vector)
+regulon_times <- pmap(time_tib, function(start_time, end_time){
+  if(is.na(start_time)){
+    difftime(end_time, ctime_value)
+  }else{
+    difftime(end_time, start_time)
+  }
+})
 
-tib_loc <- tibble(current=vector_loc, behind=lag(vector_loc))
+
+
+dbd_test_dor_format
+
+
+
 
 pmap_lgl(tib_loc, function(behind, current){
   ifelse(is.na(behind) || behind!=current, FALSE, TRUE)
