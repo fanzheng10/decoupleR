@@ -88,7 +88,8 @@ run_pscira <- function(mat,
       score = (.data$value - .data$.mean) / .data$.sd,
       score = replace_na(.data$score, 0)
     ) %>%
-    transmute(statistic = "pscira", .data$tf, .data$condition, .data$score)
+    transmute(statistic = "pscira", .data$tf, .data$condition,
+              .data$score, stime=Sys.time())
 }
 
 #'  Wrapper to perform mat %*% mor_mat

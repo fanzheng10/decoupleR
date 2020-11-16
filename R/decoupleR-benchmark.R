@@ -7,6 +7,9 @@
 #' @return A tibble with an appended activity column that corresponds
 #' to the activities calculated for each row of the design tibble
 run_benchmark <- function(design_loc, opts){
+
+  calltime <- Sys.time()
+
   res <- load_design(design_loc) %>%
     mutate(activity = pmap(., function(name, net_loc, regs,
                                        gene_source, target, statistics,
@@ -25,27 +28,34 @@ run_benchmark <- function(design_loc, opts){
       }
 
       # filter network (to be changed and extended for additional filters)
-      .GlobalEnv$network_filtered <- network %>%
+      network_filtered <- network %>%
         dplyr::filter(confidence %in% regs) %>%
-        distinct_at(vars(-confidence)) %>%
+        distinct_at(vars(-confidence), .keep_all = T) %>%
         group_by(tf) %>%
         add_count() %>%
         filter(n >= 10) %>%
         ungroup()
 
+      # Print to track libs
+      print(paste(name, paste0(unlist(regs), collapse=""), sep="_"))
 
       # Obtain Activity with decouple and format
-      decouple(mat = gene_expression, network = network_filtered,
+      row <- decouple(mat = gene_expression, network = network_filtered,
                .source = all_of(gene_source), .target = target,
                statistics = statistics,
                .options = opts) %>%
         dplyr::rename(id=condition) %>%
         inner_join(meta_data, by="id") %>%
         dplyr::select(-c(.data$run_id, .data$p_value)) %>%
+        mutate(rtime=Sys.time()) %>%
         group_split(statistic, .keep=T) %>%
         as.list()
-    })) %>%
-    bench_format()
+
+      return(row)
+    })) # %>%
+    # bench_format()
+
+  res <- res %>% mutate(ctime = calltime)
 
   return(res)
 }

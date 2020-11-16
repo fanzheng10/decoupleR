@@ -41,5 +41,5 @@ run_gsva <- function(mat,
     as.data.frame() %>%
     rownames_to_column(var = "tf") %>%
     pivot_longer(cols = -.data$tf, names_to = "condition", values_to = "score") %>%
-    transmute(statistic = "gsva", .data$tf, .data$condition, .data$score)
+    transmute(statistic = "gsva", stime = Sys.time(), .data$tf, .data$condition, .data$score)
 }

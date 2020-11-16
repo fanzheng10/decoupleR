@@ -115,7 +115,7 @@ rm(list = ls())
 knock_expr <- here("inst/benchdata/inputs", "KnockTF_gene_expr.rds")
 knock_meta <- here("inst/benchdata/inputs", "KnockTF_meta.rds")
 
-dbd_expr <- here("inst/benchdata/inputs", "input-dorothea_bench_expr.rds")
+dbd_expr <- here("inst/benchdata/inputs", "input-dorothea_bench_example.rds")
 dbd_meta <- here("inst/benchdata/inputs", "input-dorothea_bench_meta.rds")
 
 # network locations
@@ -158,6 +158,10 @@ design_tibble = tribble(
 
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
                             "dorothea_dbd_design.rds"))
+
+
+
+
 
 # 3.2. Dorothea + Knock_TF Data (KTF) ====
 design_tibble = tribble(
@@ -273,13 +277,53 @@ opts <- list(
 
 
 
-# 4.2 Run DBD ====
-library(here)
-dbd_all_combs <- run_benchmark(here("inst/benchdata/inputs/",
-                   "all_dbd.rds"), opts)
+dbd_test_dor <- run_benchmark(here("inst/benchdata/inputs/designs",
+                                   "dorothea_dbd_design.rds"), opts)
 
-# 4.3 Run Knock TF ====
 
+
+dbd_test_dor_format <- dbd_test_dor %>%
+  rowwise() %>%
+  dplyr::mutate(statistics =
+                  list(flatten_chr(.$activity[[1]] %>%
+                                     map(function(tib)
+                                       unique((tib)$statistic))))) %>%
+  unnest(c(activity, statistics)) %>%
+  mutate(stime = activity %>% map(function(tib) unique(tib$stime))) %>%
+  mutate(rtime = activity %>% map(function(tib) unique(tib$rtime))) %>%
+  unnest(c(stime, rtime)) %>%
+  arrange(stime) %>%
+  select(name, statistics, regs, ctime, stime, rtime)
+
+
+# ctime <- dbd_test_dor_format[1,]$ctime
+# rtime1 <- dbd_test_dor_format[1,]$rtime
+# rtime2 <- dbd_test_dor_format[14,]$rtime
+#
+# difftime(rtime1, ctime)
+# difftime(rtime2, rtime1)
+
+
+ctime_value <- unique(dbd_test_dor_format$ctime)
+rtime_vector <- unique(dbd_test_dor_format$rtime)
+
+tibble(current=rtime_vector, behind=lag(rtime_vector))
+
+tib_loc <- tibble(current=vector_loc, behind=lag(vector_loc))
+
+pmap_lgl(tib_loc, function(behind, current){
+  ifelse(is.na(behind) || behind!=current, FALSE, TRUE)
+})
+
+# # 4.2 Run DBD ====
+# library(here)
+# dbd_all_combs <- run_benchmark(here("inst/benchdata/inputs/",
+#                    "all_dbd.rds"), opts)
+#
+# saveRDS(dbd_all_combs, here("inst/benchdata/outputs/dbd_all_perf.rds"))
+# # 4.3 Run Knock TF ====
+# readRDS(here("inst/benchdata/inputs/",
+#              "all_dbd.rds"))
 
 
 # 5. Summarize and Visualize output ----

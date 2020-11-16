@@ -38,7 +38,8 @@ run_fgsea <- function(mat,
     options <- c(list(pathways = regulons, stats = mat[, .x]), options)
     do.call(what = fgsea, args = options)
   }, .id = "condition") %>%
-    mutate(statistic = "fgsea") %>%
+    mutate(statistic = "fgsea",
+           stime = Sys.time()) %>%
     select(.data$statistic, tf = .data$pathway, .data$condition, score = .data$ES, everything()) %>%
     as_tibble() %>%
     `attr<-`(".internal.selfref", NULL)
