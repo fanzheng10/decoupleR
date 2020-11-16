@@ -8,6 +8,7 @@
 #' to the activities calculated for each row of the design tibble
 run_benchmark <- function(design_loc, opts){
 
+  # call time of pipeline (i.e. starting time point)
   calltime <- Sys.time()
 
   res <- load_design(design_loc) %>%
@@ -55,7 +56,8 @@ run_benchmark <- function(design_loc, opts){
     })) # %>%
     # bench_format()
 
-  res <- res %>% mutate(ctime = calltime)
+  res <- res %>%
+    mutate(ctime = calltime)
 
   return(res)
 }
@@ -103,6 +105,56 @@ bench_format <- function(bench_res){
                                        map(function(tib)
                                          unique((tib)$statistic))))) %>%
     unnest(c(activity, statistics)) %>%
-    select(name, regs, statistics, activity)
+    select(name, regs, statistics, activity, ctime)
   return(res_format)
+}
+
+
+
+#' Function to calculate runtime for each statistic and gene set
+#'
+#' @param format_tibble a tibble resulting from a run that has been formatted
+#' with bench_format /codehere
+#' @return returns a tibble with runtime for each statistic and gene set
+#' @details rtime - time point at the end of benchmark run for each gene set
+#'  stime - '' for each statistic
+#'  Runtime formula:
+#'  runtime_stat1 = stime1 (end time point for stat1) - ctime (call time)
+#'  runtime_stat2 = stat2 - stat1
+#'  runtime_stat3 = stat3 - stat1
+#'  ...
+bench_runtime <- function(format_tibble){
+
+  ctime_value <- unique(format_tibble$ctime)
+
+  run_tibble <- format_tibble %>%
+    mutate(stime = activity %>% map(function(tib) unique(tib$stime))) %>%
+    mutate(rtime = activity %>% map(function(tib) unique(tib$rtime))) %>%
+    unnest(c(stime, rtime)) %>%
+    arrange(stime) %>%
+    mutate(stime_lag = lag(stime),
+           rtime_lag = lag(rtime)) %>%
+    mutate(stat_runtime = map2(stime_lag,
+                               stime,
+                               get_runtime)) %>%
+    mutate(reg_runtime = map2(rtime_lag,
+                              rtime,
+                              get_runtime)) %>%
+    unnest(c(stat_runtime, reg_runtime)) %>%
+    select(-c(ctime, stime, rtime, stime_lag, rtime_lag))
+
+  return(run_tibble)
+}
+
+#' Helper function to calculate runtime
+#'
+#' @param start_time lagged time point
+#' @param end_time time point of the end of execution for a given statistic
+#' or set of regulons
+get_runtime = function(start_time, end_time){
+  if(is.na(start_time)){
+    difftime(end_time, ctime_value)
+  }else{
+    difftime(end_time, start_time)
+  }
 }

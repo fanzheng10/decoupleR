@@ -266,23 +266,16 @@ saveRDS(designs_dbd,
 
 
 # 4. Benchmark ----
-opts <- list(
-  scira = list(),
-  pscira = list(),
-  mean = list(),
-  viper = list(options = list(verbose = FALSE)),
-  gsva = list(options = list(verbose = FALSE)),
-  fgsea = list(options = list())
-)
 
 
-
-dbd_test_dor <- run_benchmark(here("inst/benchdata/inputs/designs",
-                                   "dorothea_dbd_design.rds"), opts)
+### TIME CALC -----
 
 
+dbd_test_dor <- readRDS(here("inst/benchdata/outputs/",
+                        "dorothea_dbd_test.rds"))
 
-dbd_test_dor_format <- dbd_test_dor %>%
+
+dbd_test_format <- dbd_test_dor %>%
   rowwise() %>%
   dplyr::mutate(statistics =
                   list(flatten_chr(.$activity[[1]] %>%
@@ -291,34 +284,73 @@ dbd_test_dor_format <- dbd_test_dor %>%
   unnest(c(activity, statistics)) %>%
   mutate(stime = activity %>% map(function(tib) unique(tib$stime))) %>%
   mutate(rtime = activity %>% map(function(tib) unique(tib$rtime))) %>%
-  unnest(c(stime, rtime)) %>%
-  arrange(stime) %>%
-  select(name, statistics, regs, ctime, stime, rtime)
+  unnest(c(stime, rtime))
 
 
-ctime_value <- unique(dbd_test_dor_format$ctime)
+dbd_test_format <- dbd_test_dor %>%
+  bench_format() %>%
+  bench_runtime()
 
-# calculate differences
-time_tib <- tibble(start_time=lag(rtime_vector),
-                   end_time=rtime_vector)
-regulon_times <- pmap(time_tib, function(start_time, end_time){
+dbd_test_format
+
+
+# # Statistics runtime
+# ctime_value <- unique(dbd_test_format$ctime)
+#
+#
+# xd_time <- dbd_test_format %>%
+#   mutate(stime_lag = lag(stime),
+#          rtime_lag = lag(rtime))
+#
+# ####
+# xd_time
+# xd_runtime <- xd_time %>%
+#   mutate(stat_runtime = map2(stime_lag,
+#                              stime,
+#                              get_runtime)) %>%
+#   mutate(reg_runtime = map2(rtime_lag,
+#                             rtime,
+#                             get_runtime)) %>%
+#   unnest(c(stat_runtime, reg_runtime))
+
+
+
+
+####
+bench_runtime <- function(res_tibble){
+
+  ctime_value <- unique(res_tibble$ctime)
+
+  res_tibble <- res_tibble %>%
+    mutate(stime = activity %>% map(function(tib) unique(tib$stime))) %>%
+    mutate(rtime = activity %>% map(function(tib) unique(tib$rtime))) %>%
+    unnest(c(stime, rtime)) %>%
+    arrange(stime) %>%
+    mutate(stime_lag = lag(stime),
+           rtime_lag = lag(rtime)) %>%
+    mutate(stat_runtime = map2(stime_lag,
+                               stime,
+                               get_runtime)) %>%
+    mutate(reg_runtime = map2(rtime_lag,
+                              rtime,
+                              get_runtime)) %>%
+    unnest(c(stat_runtime, reg_runtime)) %>%
+    select(-c(ctime, stime, rtime, stime_lag, rtime_lag))
+
+  return(res_tibble)
+}
+
+####
+get_runtime = function(start_time, end_time){
   if(is.na(start_time)){
     difftime(end_time, ctime_value)
   }else{
     difftime(end_time, start_time)
   }
-})
+}
 
+####
 
-
-dbd_test_dor_format
-
-
-
-
-pmap_lgl(tib_loc, function(behind, current){
-  ifelse(is.na(behind) || behind!=current, FALSE, TRUE)
-})
 
 # # 4.2 Run DBD ====
 # library(here)
