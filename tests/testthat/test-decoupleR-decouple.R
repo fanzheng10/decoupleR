@@ -41,13 +41,13 @@ test_that("decouple same results as independent functions", {
       scira = list(),
       pscira = list(),
       mean = list(.likelihood = NULL),
-      viper = list(options = list(verbose = FALSE)),
-      gsva = list(options = list(verbose = FALSE)),
-      fgsea = list(options = list())
+      viper = list(verbose = FALSE),
+      gsva = list(verbose = FALSE)
     )
   ) %>%
     dplyr::select(-.data$run_id) %>%
-    dplyr::arrange(.data$statistic, .data$tf, .data$condition)
+    dplyr::arrange(.data$statistic, .data$tf, .data$condition) %>%
+    select(-.data$statistic_time)
 
   exp_decouple_defaults <- file.path(
     expected_dir,

@@ -2,7 +2,7 @@
 % Please edit documentation in R/statistic-mean.R
 \name{run_mean}
 \alias{run_mean}
-\title{SAFE mean}
+\title{Mean}
 \usage{
 run_mean(
   mat,
@@ -46,17 +46,33 @@ in the analysis?}
 \item{randomize_type}{How to randomize the expression matrix.}
 }
 \value{
-A long format tibble of the enrichment scores for each tf
- across the conditions. Resulting tibble contains the following columns:
- \enumerate{
-   \item{\code{statistic}}: {Indicates which method is associated with which score.}
-   \item{\code{tf}}: {Source nodes of \code{network}.}
-   \item{\code{condition}}: {Condition representing each column of \code{mat}.}
-   \item{\code{score}}: {Regulatory activity (enrichment score).}
-   \item{\code{p_value}}: {p-value for the score of mean method.}
- }
+A long format tibble of the enrichment scores for each tf across the conditions.
+Resulting tibble contains the following columns:
+\enumerate{
+\item \code{statistic}: Indicates which method is associated with which score.
+\item \code{tf}: Source nodes of \code{network}.
+\item \code{condition}: Condition representing each column of \code{mat}.
+\item \code{score}: Regulatory activity (enrichment score).
+\item \code{statistic_time}: Internal execution time indicator.
+\item \code{p_value}: p-value for the score of mean method.
+}
 }
 \description{
-Calculate the activity of a regulon through the conditions in the \code{mat}
-matrix by calculating the mean over the expression of all genes.
+Calculate the activity of all regulons in \code{network} through the conditions in
+the \code{mat} matrix by calculating the mean over the expression of all genes.
 }
+\details{
+\code{run_mean()} calculates the activity score, but in addition, it takes advantage
+of the permutations used to calculate the \code{p-value}, to provide the
+normalized activity score. This is represented in the \code{statistic} column
+which will contain two values for each call to \code{run_mean()}; \strong{mean} and
+\strong{normalized_mean}.
+}
+\seealso{
+Other decoupleR statistics: 
+\code{\link{run_gsva}()},
+\code{\link{run_pscira}()},
+\code{\link{run_scira}()},
+\code{\link{run_viper}()}
+}
+\concept{decoupleR statistics}

@@ -1,7 +1,14 @@
-#' SAFE mean
+#' Mean
 #'
-#' Calculate the activity of a regulon through the conditions in the \code{mat}
-#' matrix by calculating the mean over the expression of all genes.
+#' Calculate the activity of all regulons in `network` through the conditions in
+#' the `mat` matrix by calculating the mean over the expression of all genes.
+#'
+#' @details
+#'  `run_mean()` calculates the activity score, but in addition, it takes advantage
+#'  of the permutations used to calculate the `p-value`, to provide the
+#'  normalized activity score. This is represented in the `statistic` column
+#'  which will contain two values for each call to `run_mean()`; __mean__ and
+#'  __normalized_mean__.
 #'
 #' @inheritParams .decoupler_mat_format
 #' @inheritParams .decoupler_network_format
@@ -12,16 +19,16 @@
 #' @param sparse Should the matrices used for the calculation be sparse?
 #' @param randomize_type How to randomize the expression matrix.
 #'
-#' @return A long format tibble of the enrichment scores for each tf
-#'  across the conditions. Resulting tibble contains the following columns:
-#'  \enumerate{
-#'    \item{\code{statistic}}: {Indicates which method is associated with which score.}
-#'    \item{\code{tf}}: {Source nodes of \code{network}.}
-#'    \item{\code{condition}}: {Condition representing each column of \code{mat}.}
-#'    \item{\code{score}}: {Regulatory activity (enrichment score).}
-#'    \item{\code{p_value}}: {p-value for the score of mean method.}
-#'  }
-#'
+#' @return
+#'  A long format tibble of the enrichment scores for each tf across the conditions.
+#'  Resulting tibble contains the following columns:
+#'  1. `statistic`: Indicates which method is associated with which score.
+#'  2. `tf`: Source nodes of `network`.
+#'  3. `condition`: Condition representing each column of `mat`.
+#'  4. `score`: Regulatory activity (enrichment score).
+#'  5. `statistic_time`: Internal execution time indicator.
+#'  6. `p_value`: p-value for the score of mean method.
+#' @family decoupleR statistics
 #' @export
 #' @import dplyr
 #' @import purrr
@@ -41,6 +48,8 @@ run_mean <- function(mat,
                      randomize_type = "rows") {
 
   # Before to start ---------------------------------------------------------
+  .start_time <- Sys.time()
+
   if (times < 2) {
     stop(str_interp("Parameter 'times' must be greater than or equal to 2, but ${times} was passed."))
   }
@@ -83,7 +92,11 @@ run_mean <- function(mat,
     )
 
   # Analysis ----------------------------------------------------------------
-  .mean_analysis(mat, weight_mat, shared_targets, times, seed, randomize_type)
+  .mean_analysis(mat, weight_mat, shared_targets, times, seed, randomize_type) %>%
+    add_column(
+      statistic_time = difftime(Sys.time(), .start_time),
+      .after = "score"
+    )
 }
 
 # Helper functions --------------------------------------------------------
@@ -96,7 +109,7 @@ run_mean <- function(mat,
 #' @param weight_mat Matrix that corresponds to the multiplication of the mor
 #'  column with likelihood divided over the contribution.
 #' @param shared_targets Target nodes that are shared between the
-#'  \code{mat} and \code{network}.
+#'  `mat` and `network`.
 #'
 #' @inherit run_mean return
 #'
@@ -166,9 +179,9 @@ run_mean <- function(mat,
 #' If random is true, then it permutes the rows of the matrix
 #' (i.e preserves the column relationships), otherwise it maintains
 #' the original order of the data. Then it takes only those rows with
-#' the values provided in \code{shared_targets}.
+#' the values provided in `shared_targets`.
 #'
-#' @return Matrix with rows that match \code{shared_targets}.
+#' @return Matrix with rows that match `shared_targets`.
 #'
 #' @inheritParams .mean_analysis
 #' @keywords internal
