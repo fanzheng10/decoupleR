@@ -142,9 +142,9 @@ opts <- list(
   scira = list(),
   pscira = list(),
   mean = list(),
-  viper = list(options = list(verbose = FALSE)),
-  gsva = list(options = list(verbose = FALSE)),
-  fgsea = list(options = list())
+  viper = list(verbose = FALSE, minsize=0),
+  gsva = list(verbose = FALSE)
+  # fgsea = list(options = list())
 )
 
 
@@ -154,10 +154,10 @@ regs <- list(c("A"),
           c("A", "B", "C", "D", "E"))
 
 design_tibble = tribble(
-  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta,
-  "dorothea_dbd", dorothea_loc, regs[[1]], "tf", "target", statistics, dbd_expr, dbd_meta,
-  "dorothea_dbd", dorothea_loc, regs[[2]], "tf", "target", statistics, dbd_expr, dbd_meta,
-  "dorothea_dbd", dorothea_loc, regs[[3]], "tf", "target", statistics, dbd_expr, dbd_meta,
+  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta, ~opts,
+  "dorothea_dbd", dorothea_loc, regs[[1]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
+  "dorothea_dbd", dorothea_loc, regs[[2]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
+  "dorothea_dbd", dorothea_loc, regs[[3]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
   )
 
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
@@ -169,10 +169,10 @@ saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
 
 # 3.2. Dorothea + Knock_TF Data (KTF) ====
 design_tibble = tribble(
-  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta,
-  "dorothea_ktf", dorothea_loc, regs[[1]], "tf", "target", statistics, knock_expr, knock_meta,
-  "dorothea_ktf", dorothea_loc, regs[[2]], "tf", "target", statistics, knock_expr, knock_meta,
-  "dorothea_ktf", dorothea_loc, regs[[3]], "tf", "target", statistics, knock_expr, knock_meta,
+  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta, ~opts,
+  "dorothea_ktf", dorothea_loc, regs[[1]], "tf", "target", statistics, knock_expr, knock_meta, opts,
+  "dorothea_ktf", dorothea_loc, regs[[2]], "tf", "target", statistics, knock_expr, knock_meta, opts,
+  "dorothea_ktf", dorothea_loc, regs[[3]], "tf", "target", statistics, knock_expr, knock_meta, opts,
 )
 
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
@@ -184,13 +184,13 @@ ch_regs <- list("archs4_coexpression", "encode_chip_seq", "enrichr_queries",
           "gtex_coexpression", "literature_chip_seq", "remap_chip_seq")
 
 design_tibble = tribble(
-  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta,
-  "ChEA3_dbd", chea3_loc, ch_regs[[1]], "tf", "target", statistics, dbd_expr, dbd_meta,
-  "ChEA3_dbd", chea3_loc, ch_regs[[2]], "tf", "target", statistics, dbd_expr, dbd_meta,
-  "ChEA3_dbd", chea3_loc, ch_regs[[3]], "tf", "target", statistics, dbd_expr, dbd_meta,
-  "ChEA3_dbd", chea3_loc, ch_regs[[4]], "tf", "target", statistics, dbd_expr, dbd_meta,
-  "ChEA3_dbd", chea3_loc, ch_regs[[5]], "tf", "target", statistics, dbd_expr, dbd_meta,
-  "ChEA3_dbd", chea3_loc, ch_regs[[6]], "tf", "target", statistics, dbd_expr, dbd_meta,
+  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta, ~opts,
+  "ChEA3_dbd", chea3_loc, ch_regs[[1]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
+  "ChEA3_dbd", chea3_loc, ch_regs[[2]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
+  "ChEA3_dbd", chea3_loc, ch_regs[[3]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
+  "ChEA3_dbd", chea3_loc, ch_regs[[4]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
+  "ChEA3_dbd", chea3_loc, ch_regs[[5]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
+  "ChEA3_dbd", chea3_loc, ch_regs[[6]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
 )
 design_tibble$regs %<>% as.list
 
@@ -199,13 +199,13 @@ saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
 
 # 3.4. ChEA3 + KTF ====
 design_tibble = tribble(
-  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta,
-  "ChEA3_ktf", chea3_loc, ch_regs[[1]], "tf", "target", statistics, knock_expr, knock_meta,
-  "ChEA3_ktf", chea3_loc, ch_regs[[2]], "tf", "target", statistics, knock_expr, knock_meta,
-  "ChEA3_ktf", chea3_loc, ch_regs[[3]], "tf", "target", statistics, knock_expr, knock_meta,
-  "ChEA3_ktf", chea3_loc, ch_regs[[4]], "tf", "target", statistics, knock_expr, knock_meta,
-  "ChEA3_ktf", chea3_loc, ch_regs[[5]], "tf", "target", statistics, knock_expr, knock_meta,
-  "ChEA3_ktf", chea3_loc, ch_regs[[6]], "tf", "target", statistics, knock_expr, knock_meta,
+  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta, ~opts,
+  "ChEA3_ktf", chea3_loc, ch_regs[[1]], "tf", "target", statistics, knock_expr, knock_meta, opts,
+  "ChEA3_ktf", chea3_loc, ch_regs[[2]], "tf", "target", statistics, knock_expr, knock_meta, opts,
+  "ChEA3_ktf", chea3_loc, ch_regs[[3]], "tf", "target", statistics, knock_expr, knock_meta, opts,
+  "ChEA3_ktf", chea3_loc, ch_regs[[4]], "tf", "target", statistics, knock_expr, knock_meta, opts,
+  "ChEA3_ktf", chea3_loc, ch_regs[[5]], "tf", "target", statistics, knock_expr, knock_meta, opts,
+  "ChEA3_ktf", chea3_loc, ch_regs[[6]], "tf", "target", statistics, knock_expr, knock_meta, opts,
 )
 design_tibble$regs %<>% as.list
 
@@ -220,10 +220,10 @@ rn_regs <- list(c("High"),
 
 
 design_tibble = tribble(
-  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta,
-  "regnet_dbd", regnet_loc, rn_regs[[1]], "tf", "target", statistics, dbd_expr, dbd_meta,
-  "regnet_dbd", regnet_loc, rn_regs[[2]], "tf", "target", statistics, dbd_expr, dbd_meta,
-  "regnet_dbd", regnet_loc, rn_regs[[3]], "tf", "target", statistics, dbd_expr, dbd_meta,
+  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta, ~opts,
+  "regnet_dbd", regnet_loc, rn_regs[[1]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
+  "regnet_dbd", regnet_loc, rn_regs[[2]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
+  "regnet_dbd", regnet_loc, rn_regs[[3]], "tf", "target", statistics, dbd_expr, dbd_meta, opts,
 )
 
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
@@ -231,15 +231,14 @@ saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
 
 # 3.6. RegNetwork + KTF ====
 design_tibble = tribble(
-  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta,
-  "regnet_ktf", regnet_loc,  rn_regs[[1]], "tf", "target", statistics, knock_expr, knock_meta,
-  "regnet_ktf", regnet_loc,   rn_regs[[2]], "tf", "target", statistics, knock_expr, knock_meta,
-  "regnet_ktf", regnet_loc,   rn_regs[[3]], "tf", "target", statistics, knock_expr, knock_meta,
+  ~name, ~net_loc, ~regs, ~gene_source, ~target, ~statistics, ~bnch_expr, ~bench_meta, ~opts,
+  "regnet_ktf", regnet_loc,  rn_regs[[1]], "tf", "target", statistics, knock_expr, knock_meta, opts,
+  "regnet_ktf", regnet_loc,   rn_regs[[2]], "tf", "target", statistics, knock_expr, knock_meta, opts,
+  "regnet_ktf", regnet_loc,   rn_regs[[3]], "tf", "target", statistics, knock_expr, knock_meta, opts,
 )
 
 saveRDS(design_tibble, here("inst/benchdata/inputs/designs",
                             "regnet_ktf_design.rds"))
-
 
 # 3.7. Combine all designs ====
 designs <-
@@ -270,53 +269,8 @@ saveRDS(designs_dbd,
 
 
 # 4. Benchmark ----
-### TIME CALC -----
-# options
-opts <- list(
-  scira = list(),
-  pscira = list(),
-  mean = list(),
-  viper = list(options = list(verbose = FALSE)),
-  gsva = list(options = list(verbose = FALSE)),
-  fgsea = list(options = list(nperm=1000))
-)
 
-
-
-
-
-dbd_test_dor <- run_benchmark(here("inst/benchdata/inputs/designs",
-                                   "dorothea_dbd_design.rds"), opts)
-
-
-
-# library(here)
-#
-#
-# dbd_test_dor <- readRDS(here("inst/benchdata/outputs/",
-#                              "dorothea_dbd.rds"))
-
-# ctime_value <- dbd_test_dor$activity[[1]][[3]]$stime[[1]]
-
-
-
-dbd_test_format <- dbd_test_dor %>%
-  bench_format()
-
-
-dbd_test_runtime <- dbd_test_format %>%
-  bench_runtime()
-print(dbd_test_runtime, n=100)
-
-
-dbd_test_roc <- dbd_test_runtime %>%
-  mutate(roc = activity %>% map(calc_roc_curve))
-
-dbd_test_sum <- dbd_test_roc %>%
-  bench_sumplot()
-
-
-# # 4.2 Run DBD ====
+# # 4.1 Run DBD ====
 # library(here)
 
 readRDS(here("inst/benchdata/inputs/",
@@ -353,24 +307,14 @@ dbd_all_sum %>%
   group_by(statistics) %>%
   summarise(sum(stat_runtime))
 
-# 4.3 Run Knock TF (logFC) ====
-opts <- list(
-  scira = list(),
-  pscira = list(),
-  mean = list(),
-  viper = list(options = list(verbose = FALSE)),
-  gsva = list(options = list(verbose = FALSE)) #,
-  # fgsea = list(options = list(nperm=1000))
-)
-
-
+# 4.2 Run Knock TF (logFC) ====
 design_ktf <- readRDS(here("inst/benchdata/inputs/",
              "all_ktf.rds"))
 
 design_ktf
 
 ktf_all_combs <- run_benchmark(here("inst/benchdata/inputs/",
-                                    "all_ktf.rds"), opts)
+                                    "all_ktf.rds"))
 
 
 
@@ -406,4 +350,7 @@ ktf_plot_sum <- ktf_all_roc %>% bench_sumplot()
 
 
 # 5. Summarize and Visualize output ----
-
+# Include options in design tibble
+# Change to statistic_time
+# use quotations for column names
+# p-values
