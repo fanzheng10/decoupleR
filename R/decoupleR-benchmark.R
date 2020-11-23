@@ -9,7 +9,7 @@
 run_benchmark <- function(design_loc, opts){
 
   # call time of pipeline (i.e. starting time point)
-  calltime <- Sys.time()
+  .GlobalEnv$ctime_value <- Sys.time()
 
   res <- load_design(design_loc) %>%
     mutate(activity = pmap(., function(name, net_loc, regs,
@@ -55,9 +55,6 @@ run_benchmark <- function(design_loc, opts){
       return(row)
     })) # %>%
     # bench_format()
-
-  res <- res %>%
-    mutate(ctime = calltime)
 
   return(res)
 }
@@ -105,7 +102,7 @@ bench_format <- function(bench_res){
                                        map(function(tib)
                                          unique((tib)$statistic))))) %>%
     unnest(c(activity, statistics)) %>%
-    select(name, regs, statistics, activity, ctime)
+    select(name, regs, statistics, activity)
   return(res_format)
 }
 
@@ -125,8 +122,6 @@ bench_format <- function(bench_res){
 #'  ...
 bench_runtime <- function(format_tibble){
 
-  ctime_value <- unique(format_tibble$ctime)
-
   run_tibble <- format_tibble %>%
     mutate(stime = activity %>% map(function(tib) unique(tib$stime))) %>%
     mutate(rtime = activity %>% map(function(tib) unique(tib$rtime))) %>%
@@ -141,7 +136,7 @@ bench_runtime <- function(format_tibble){
                               rtime,
                               get_runtime)) %>%
     unnest(c(stat_runtime, reg_runtime)) %>%
-    select(-c(ctime, stime, rtime, stime_lag, rtime_lag))
+    select(-c(stime, rtime, stime_lag, rtime_lag))
 
   return(run_tibble)
 }

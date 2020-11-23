@@ -145,7 +145,9 @@ prepare_for_roc = function(df, filter_tn = F, ranked = F) {
 #' @param coverage print TF coverage (TRUE/FALSE)
 #' @return AUROC, TF coverage (optional), ROC AUROC, Heatmap plots
 #' @import ggplot2, pheatmap
-bench_sumplot <- function(data, title) {
+bench_sumplot <- function(data, title = "") {
+  library(ggplot2)
+  library(pheatmap)
 
   roc <- apply(data, 1, function(df) {
     mutate(df$roc, name = df$name)
@@ -156,8 +158,7 @@ bench_sumplot <- function(data, title) {
   cov <- roc %>%
     group_by(name) %>%
     summarise(coverage) %>%
-    distinct() %>%
-    arrange(-coverage)
+    distinct()
 
   # Plot ROC
   roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = name)) +
@@ -184,6 +185,9 @@ bench_sumplot <- function(data, title) {
 
   # Plot AUROC heat
   auroc_heat <- auroc %>%
+    rowwise() %>%
+    mutate(confidence = paste0(confidence, collapse="")) %>%
+    ungroup() %>%
     unite(name, confidence, col="confidence") %>%
     select(statistics, auroc, confidence) %>%
     pivot_wider(names_from = confidence, values_from = auroc) %>%

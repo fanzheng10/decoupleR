@@ -75,6 +75,8 @@ meta_expr <- expr %>%
 meta_expr
 saveRDS(meta_expr, here("inst/benchdata/inputs/", "input-dorothea_bench_meta.rds"))
 
+readRDS(here("inst/benchdata/inputs/", "input-dorothea_bench_meta.rds"))
+
 # 2.2. Filter KTF data  ====
 expr = read.table(here("inst/testdata/inputs", "knockTF.txt"), sep = "\t", header = TRUE) %>%
   select("Sample_ID", "TF", "Gene", "Log2FC") %>%
@@ -104,6 +106,8 @@ meta_expr = expr %>%
   mutate(sign = -1) #knock-down or knock-out of all TFs
 saveRDS(meta_expr, here("inst/benchdata/inputs/", "KnockTF_meta.rds"))
 
+
+
 # clear env.
 rm(list = ls())
 
@@ -115,7 +119,7 @@ rm(list = ls())
 knock_expr <- here("inst/benchdata/inputs", "KnockTF_gene_expr.rds")
 knock_meta <- here("inst/benchdata/inputs", "KnockTF_meta.rds")
 
-dbd_expr <- here("inst/benchdata/inputs", "input-dorothea_bench_example.rds")
+dbd_expr <- here("inst/benchdata/inputs", "input-dorothea_bench_expr.rds")
 dbd_meta <- here("inst/benchdata/inputs", "input-dorothea_bench_meta.rds")
 
 # network locations
@@ -129,8 +133,8 @@ statistics <- c(
   "pscira",
   "scira",
   "viper",
-  "gsva",
-  "fgsea"
+  "gsva" #,
+  # "fgsea"
 )
 
 # options
@@ -266,101 +270,139 @@ saveRDS(designs_dbd,
 
 
 # 4. Benchmark ----
-
-
 ### TIME CALC -----
+# options
+opts <- list(
+  scira = list(),
+  pscira = list(),
+  mean = list(),
+  viper = list(options = list(verbose = FALSE)),
+  gsva = list(options = list(verbose = FALSE)),
+  fgsea = list(options = list(nperm=1000))
+)
 
 
-dbd_test_dor <- readRDS(here("inst/benchdata/outputs/",
-                        "dorothea_dbd_test.rds"))
+
+
+
+dbd_test_dor <- run_benchmark(here("inst/benchdata/inputs/designs",
+                                   "dorothea_dbd_design.rds"), opts)
+
+
+
+# library(here)
+#
+#
+# dbd_test_dor <- readRDS(here("inst/benchdata/outputs/",
+#                              "dorothea_dbd.rds"))
+
+# ctime_value <- dbd_test_dor$activity[[1]][[3]]$stime[[1]]
+
 
 
 dbd_test_format <- dbd_test_dor %>%
-  rowwise() %>%
-  dplyr::mutate(statistics =
-                  list(flatten_chr(.$activity[[1]] %>%
-                                     map(function(tib)
-                                       unique((tib)$statistic))))) %>%
-  unnest(c(activity, statistics)) %>%
-  mutate(stime = activity %>% map(function(tib) unique(tib$stime))) %>%
-  mutate(rtime = activity %>% map(function(tib) unique(tib$rtime))) %>%
-  unnest(c(stime, rtime))
+  bench_format()
 
 
-dbd_test_format <- dbd_test_dor %>%
-  bench_format() %>%
+dbd_test_runtime <- dbd_test_format %>%
   bench_runtime()
-
-dbd_test_format
-
-
-# # Statistics runtime
-# ctime_value <- unique(dbd_test_format$ctime)
-#
-#
-# xd_time <- dbd_test_format %>%
-#   mutate(stime_lag = lag(stime),
-#          rtime_lag = lag(rtime))
-#
-# ####
-# xd_time
-# xd_runtime <- xd_time %>%
-#   mutate(stat_runtime = map2(stime_lag,
-#                              stime,
-#                              get_runtime)) %>%
-#   mutate(reg_runtime = map2(rtime_lag,
-#                             rtime,
-#                             get_runtime)) %>%
-#   unnest(c(stat_runtime, reg_runtime))
+print(dbd_test_runtime, n=100)
 
 
+dbd_test_roc <- dbd_test_runtime %>%
+  mutate(roc = activity %>% map(calc_roc_curve))
 
-
-####
-bench_runtime <- function(res_tibble){
-
-  ctime_value <- unique(res_tibble$ctime)
-
-  res_tibble <- res_tibble %>%
-    mutate(stime = activity %>% map(function(tib) unique(tib$stime))) %>%
-    mutate(rtime = activity %>% map(function(tib) unique(tib$rtime))) %>%
-    unnest(c(stime, rtime)) %>%
-    arrange(stime) %>%
-    mutate(stime_lag = lag(stime),
-           rtime_lag = lag(rtime)) %>%
-    mutate(stat_runtime = map2(stime_lag,
-                               stime,
-                               get_runtime)) %>%
-    mutate(reg_runtime = map2(rtime_lag,
-                              rtime,
-                              get_runtime)) %>%
-    unnest(c(stat_runtime, reg_runtime)) %>%
-    select(-c(ctime, stime, rtime, stime_lag, rtime_lag))
-
-  return(res_tibble)
-}
-
-####
-get_runtime = function(start_time, end_time){
-  if(is.na(start_time)){
-    difftime(end_time, ctime_value)
-  }else{
-    difftime(end_time, start_time)
-  }
-}
-
-####
+dbd_test_sum <- dbd_test_roc %>%
+  bench_sumplot()
 
 
 # # 4.2 Run DBD ====
 # library(here)
-# dbd_all_combs <- run_benchmark(here("inst/benchdata/inputs/",
-#                    "all_dbd.rds"), opts)
-#
-# saveRDS(dbd_all_combs, here("inst/benchdata/outputs/dbd_all_perf.rds"))
-# # 4.3 Run Knock TF ====
-# readRDS(here("inst/benchdata/inputs/",
-#              "all_dbd.rds"))
+
+readRDS(here("inst/benchdata/inputs/",
+             "all_dbd.rds"))
+
+dbd_all_combs <- run_benchmark(here("inst/benchdata/inputs/",
+                   "all_dbd.rds"), opts)
+
+dbd_all_combs <- dbd_all_combs %>%
+  mutate(ctime = ctime_value)
+
+
+saveRDS(dbd_all_combs, here("inst/benchdata/outputs/dbd_all_perf.rds"))
+
+
+dbd_all_sum <- dbd_all_combs %>%
+  bench_format()  %>%
+  bench_runtime() %>%
+  mutate(roc = activity %>% map(calc_roc_curve))
+saveRDS(dbd_all_sum, here("inst/benchdata/outputs/dbd_all_sum.rds"))
+
+
+print(dbd_all_sum, n=100)
+
+dbd_summary <- dbd_all_sum %>%
+  bench_sumplot()
+
+dbd_summary$auroc_heat
+
+sum(dbd_all_sum$stat_runtime)
+
+dbd_all_sum %>%
+  filter(statistics == "fgsea") %>%
+  group_by(statistics) %>%
+  summarise(sum(stat_runtime))
+
+# 4.3 Run Knock TF (logFC) ====
+opts <- list(
+  scira = list(),
+  pscira = list(),
+  mean = list(),
+  viper = list(options = list(verbose = FALSE)),
+  gsva = list(options = list(verbose = FALSE)) #,
+  # fgsea = list(options = list(nperm=1000))
+)
+
+
+design_ktf <- readRDS(here("inst/benchdata/inputs/",
+             "all_ktf.rds"))
+
+design_ktf
+
+ktf_all_combs <- run_benchmark(here("inst/benchdata/inputs/",
+                                    "all_ktf.rds"), opts)
+
+
+
+
+ktf_all_combs <- ktf_all_combs %>%
+  mutate(ctime =ctime_value)
+
+saveRDS(ktf_all_combs, here("inst/benchdata/inputs/",
+                         "all_ktf_perf.rds"))
+
+
+ktf_all_combs <- readRDS(here("inst/benchdata/inputs/",
+                             "all_ktf_perf.rds"))
+
+ctime_value <- ktf_all_form$ctime
+
+ktf_all_form <- ktf_all_combs %>%
+  bench_format() %>%
+  bench_runtime() %>%
+  # remove NAs and infinity values
+  mutate(activity = activity %>%
+           map(function(tib) tib %>%
+                 mutate_at(vars(score), ~replace(., is.na(.), 0)) %>%
+                 mutate_at(vars(score), ~replace(., is.infinite(.), 0))
+           ))
+
+ktf_all_roc <- ktf_all_form %>%
+  mutate(roc = activity %>% map(calc_roc_curve))
+
+
+
+ktf_plot_sum <- ktf_all_roc %>% bench_sumplot()
 
 
 # 5. Summarize and Visualize output ----
