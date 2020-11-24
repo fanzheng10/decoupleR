@@ -144,11 +144,6 @@ prepare_for_roc = function(df, filter_tn = F, ranked = F) {
 #' @return AUROC, TF coverage (optional), ROC AUROC, Heatmap plots
 #' @import ggplot2, pheatmap
 bench_sumplot <- function(data, title = "") {
-  library(ggplot2)
-  library(pheatmap)
-
-  data <- data %>%
-    select(name, statistic, regs, roc)
 
   roc <- apply(data, 1, function(df) {
     mutate(df$roc, name = df$name)
@@ -172,11 +167,12 @@ bench_sumplot <- function(data, title = "") {
   # Extract AUROC
   auroc <- data %>%
     unnest(roc) %>%
-    select(name, confidence = regs, statistic, auroc = auc) %>%
+    select(name, statistic, auroc = auc) %>%
+    unite("row", name, statistic, remove = F) %>%
     distinct()
 
   # Plot AUROC
-  auroc_plot <- ggplot(auroc, aes(x = reorder(name, auroc), y = auroc, fill = name)) +
+  auroc_plot <- ggplot(auroc, aes(x = reorder(row, auroc), y = auroc, fill = row)) +
     geom_bar(stat = "identity") +
     ggtitle(paste("AUROC:", title)) +
     xlab("networks") +
@@ -186,12 +182,8 @@ bench_sumplot <- function(data, title = "") {
 
   # Plot AUROC heat
   auroc_heat <- auroc %>%
-    rowwise() %>%
-    mutate(confidence = paste0(confidence, collapse="")) %>%
-    ungroup() %>%
-    unite(name, confidence, col="confidence") %>%
-    select(statistic, auroc, confidence) %>%
-    pivot_wider(names_from = confidence, values_from = auroc) %>%
+    select(statistic, auroc, name) %>%
+    pivot_wider(names_from = name, values_from = auroc) %>%
     column_to_rownames(var = "statistic") %>%
     pheatmap(.,
              cluster_rows = F,

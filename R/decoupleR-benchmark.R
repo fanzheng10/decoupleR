@@ -113,7 +113,7 @@ bench_format <- function(bench_res){
     mutate(statistic = activity %>%
              map(function(tib)
                unique(tib[["statistic"]]))) %>%
-    unnest(statistics) %>%
+    unnest(statistic) %>%
     select(name, regs, statistic, statistic_time, regulon_time, activity)
   return(res_format)
 }
