@@ -94,26 +94,26 @@ check_prereq <- function(vector_loc){
 #' @returns formatted benchmarking results
 bench_format <- function(bench_res){
   res_format <- bench_res %>%
-    # get statistics names
-    rowwise() %>%
-    dplyr::mutate(statistics =
-                    list(flatten_chr(.$activity[[1]] %>% # check if it works with different stat lists
-                                       map(function(tib)
-                                         unique((tib)$statistic))))) %>%
-    unnest(c(activity, statistics)) %>%
-    # get stat time
+    unnest(activity) %>%
+    # get statistic time from activity
     mutate(statistic_time = activity %>%
              map(function(tib)
                tib %>%
                  select(statistic_time) %>%
                  unique)) %>%
     unnest(statistic_time) %>%
-    # convert regulons to variable if list
-    rowwise() %>%
-    mutate(regs = paste0(unlist(regs), collapse = "")) %>%
-    # get regulon time
+    # calculate regulon size
     group_by(name, regs) %>%
     mutate(regulon_time = sum(statistic_time)) %>%
-    select(name, regs, statistics, activity, statistic_time, regulon_time)
+    # convert regs from character to string
+    rowwise() %>%
+    mutate(regs = paste0(unlist(regs), collapse = "")) %>%
+    ungroup() %>%
+    # get statistic name
+    mutate(statistic = activity %>%
+             map(function(tib)
+               unique(tib[["statistic"]]))) %>%
+    unnest(statistics) %>%
+    select(name, regs, statistic, statistic_time, regulon_time, activity)
   return(res_format)
 }

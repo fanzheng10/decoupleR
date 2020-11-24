@@ -147,6 +147,9 @@ bench_sumplot <- function(data, title = "") {
   library(ggplot2)
   library(pheatmap)
 
+  data <- data %>%
+    select(name, statistic, regs, roc)
+
   roc <- apply(data, 1, function(df) {
     mutate(df$roc, name = df$name)
   }) %>%
@@ -169,7 +172,7 @@ bench_sumplot <- function(data, title = "") {
   # Extract AUROC
   auroc <- data %>%
     unnest(roc) %>%
-    select(name, confidence = regs, statistics, auroc = auc) %>%
+    select(name, confidence = regs, statistic, auroc = auc) %>%
     distinct()
 
   # Plot AUROC
@@ -187,9 +190,9 @@ bench_sumplot <- function(data, title = "") {
     mutate(confidence = paste0(confidence, collapse="")) %>%
     ungroup() %>%
     unite(name, confidence, col="confidence") %>%
-    select(statistics, auroc, confidence) %>%
+    select(statistic, auroc, confidence) %>%
     pivot_wider(names_from = confidence, values_from = auroc) %>%
-    column_to_rownames(var = "statistics") %>%
+    column_to_rownames(var = "statistic") %>%
     pheatmap(.,
              cluster_rows = F,
              treeheight_col = 0,
