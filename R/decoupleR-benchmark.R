@@ -1,11 +1,16 @@
 #' Benchmark gene sets with decouple
 #'
-#' @inheritParams load_design
+#' @inheritParams format_design
+#' @param minsize regulon/gene set minimum number of targets/members
+#' @param format bool whether to format or not
 #' @return A tibble with an appended activity column that corresponds
 #' to the activities calculated for each row of the design tibble
-run_benchmark <- function(design_loc){
+run_benchmark <- function(design,
+                          .minsize = 10,
+                          .format = T){
 
-  res <- load_design(design_loc) %>%
+  res <- design %>%
+    format_design() %>%
     mutate(activity = pmap(., function(name, net_loc, regs,
                                        gene_source, target, statistics,
                                        bnch_expr, bench_meta,
@@ -28,7 +33,7 @@ run_benchmark <- function(design_loc){
         distinct_at(vars(-confidence), .keep_all = T) %>%
         group_by(tf) %>%
         add_count() %>%
-        filter(n >= 10) %>%
+        filter(n >= .minsize) %>%
         ungroup()
 
       # Print to track libs
@@ -42,7 +47,9 @@ run_benchmark <- function(design_loc){
         dplyr::rename(id=condition) %>%
         inner_join(meta_data, by="id")  %>%
         group_split(statistic, .keep=T)
-    }))
+    })) %>% {
+      if(.format) bench_format(.) else .
+    }
 
   return(res)
 }
@@ -50,15 +57,13 @@ run_benchmark <- function(design_loc){
 
 #' Load Design from JSON file and Format
 #'
-#' @param design_loc location of a json file with run design specifications
+#' @param design location of a json file with run design specifications
 #' @return a design tibble to be used in benchmarking
-load_design <- function(design_loc){
-  # load RDS
-  design <- readRDS(design_loc) %>%
+format_design <- function(design){
+  design %>%
     mutate(net_bln = net_loc %>% check_prereq(),
            expr_bln = bnch_expr %>% check_prereq(),
            meta_bln = bench_meta %>% check_prereq())
-  return(design)
 }
 
 

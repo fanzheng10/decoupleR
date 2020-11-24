@@ -136,8 +136,6 @@ prepare_for_roc = function(df, filter_tn = F, ranked = F) {
 }
 
 
-
-
 #' FUNCTION: Plot ROC curve and AUROC
 #'
 #' @param data

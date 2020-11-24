@@ -77,7 +77,7 @@ saveRDS(meta_expr, here("inst/benchdata/inputs/", "input-dorothea_bench_meta.rds
 
 readRDS(here("inst/benchdata/inputs/", "input-dorothea_bench_meta.rds"))
 
-# 2.2. Filter KTF data  ====
+# 2.2. a) Filter KTF data  ====
 expr = read.table(here("inst/testdata/inputs", "knockTF.txt"), sep = "\t", header = TRUE) %>%
   select("Sample_ID", "TF", "Gene", "Log2FC") %>%
   select(expression = Log2FC, id = Sample_ID,
@@ -106,11 +106,54 @@ meta_expr = expr %>%
   mutate(sign = -1) #knock-down or knock-out of all TFs
 saveRDS(meta_expr, here("inst/benchdata/inputs/", "KnockTF_meta.rds"))
 
-
-
 # clear env.
 rm(list = ls())
 
+# 2.2. b) KTF p-val as activity ====
+expr = read.table(here("inst/testdata/inputs", "knockTF.txt"),
+                  sep = "\t", header = TRUE)
+
+expr_pvalue <- expr  %>%
+  select("Sample_ID", "TF", "Gene", "Log2FC", "P_value") %>%
+  select(id = Sample_ID, gene = Gene, tf = TF, everything()) %>%
+  mutate(expression = abs(log2(as.double(P_value))) * sign(Log2FC)) %>%
+  ungroup() %>%
+  drop_na() # gene obsvs dropped in 70 experiments
+
+# spread data (one column per experiment id)
+gene_expression = expr_pvalue %>%
+  select(gene, id, expression) %>%
+  spread(id, expression, fill = 0) %>%
+  na.omit() %>%
+  data.frame(row.names=1, stringsAsFactors = F, check.names = F)
+saveRDS(gene_expression, here("inst/benchdata/inputs",
+                              "KnockTF_pvalue_expr.rds"))
+
+# Save Example
+saveRDS(gene_expression[,1:10], here("inst/benchdata/inputs/",
+                                     "KnockTF_pval_example.rds"))
+
+
+# 2.2. c) KTF rank as activity ====
+expr_rank <- expr %>%
+  select("Sample_ID", "TF", "Gene", "Log2FC", "Rank") %>%
+  select(id = Sample_ID, gene = Gene, tf = TF, everything()) %>%
+  group_by(id) %>%
+  add_count() %>%
+  mutate(expression = abs(log2(Rank/n)) * sign(Log2FC)) %>%
+  ungroup()
+
+# spread data (one column per experiment id)
+gene_expression = expr_rank %>%
+  select(gene, id, expression) %>%
+  spread(id, expression, fill = 0) %>%
+  na.omit() %>%
+  data.frame(row.names=1, stringsAsFactors = F, check.names = F)
+saveRDS(gene_expression, here("inst/benchdata/inputs/", "KnockTF_rank_expr.rds"))
+
+# Save Example
+saveRDS(gene_expression[,1:10], here("inst/benchdata/inputs/",
+                                     "KnockTF_rank_example.rds"))
 
 # 3. Create Design JSONs ----
 
@@ -268,30 +311,33 @@ saveRDS(designs_dbd,
              "all_dbd.rds"))
 
 
-# 4. Benchmark ----
+# 4. Benchmark (To be DELETED) ----
 
 # # 4.1 Run DBD ====
 # library(here)
-
 readRDS(here("inst/benchdata/inputs/",
              "all_dbd.rds"))
 
+#
 dbd_all_combs <- run_benchmark(here("inst/benchdata/inputs/",
                    "all_dbd.rds"), opts)
 
+#
 dbd_all_combs <- dbd_all_combs %>%
   mutate(ctime = ctime_value)
 
-
+#
 saveRDS(dbd_all_combs, here("inst/benchdata/outputs/dbd_all_perf.rds"))
 
 
+# Get Summary
 dbd_all_sum <- dbd_all_combs %>%
   bench_format()  %>%
-  bench_runtime() %>%
   mutate(roc = activity %>% map(calc_roc_curve))
 saveRDS(dbd_all_sum, here("inst/benchdata/outputs/dbd_all_sum.rds"))
 
+
+dbd_all_sum <- readRDS(here("inst/benchdata/outputs/dbd_all_sum.rds"))
 
 print(dbd_all_sum, n=100)
 
@@ -300,12 +346,6 @@ dbd_summary <- dbd_all_sum %>%
 
 dbd_summary$auroc_heat
 
-sum(dbd_all_sum$stat_runtime)
-
-dbd_all_sum %>%
-  filter(statistics == "fgsea") %>%
-  group_by(statistics) %>%
-  summarise(sum(stat_runtime))
 
 # 4.2 Run Knock TF (logFC) ====
 design_ktf <- readRDS(here("inst/benchdata/inputs/",
@@ -320,7 +360,7 @@ ktf_all_combs <- run_benchmark(here("inst/benchdata/inputs/",
 
 
 ktf_all_combs <- ktf_all_combs %>%
-  mutate(ctime =ctime_value)
+  mutate(ctime=ctime_value)
 
 saveRDS(ktf_all_combs, here("inst/benchdata/inputs/",
                          "all_ktf_perf.rds"))
@@ -331,6 +371,7 @@ ktf_all_combs <- readRDS(here("inst/benchdata/inputs/",
 
 ctime_value <- ktf_all_form$ctime
 
+# Get Summary
 ktf_all_form <- ktf_all_combs %>%
   bench_format() %>%
   bench_runtime() %>%
@@ -346,11 +387,70 @@ ktf_all_roc <- ktf_all_form %>%
 
 
 
-ktf_plot_sum <- ktf_all_roc %>% bench_sumplot()
+ktf_plot_sum <- ktf_all_roc %>%
+  bench_sumplot()
 
+
+
+# 4.3. Run Knock TF (Rank as activity) ----
+design_doro_rank <-readRDS(here("inst/benchdata/inputs/designs",
+     "dorothea_ktf_design.rds"))
+design_doro_rank$bnch_expr <- here("inst/benchdata/inputs",
+                                   "KnockTF_rank_expr.rds")
+design_doro_rank$name <- "dorothea_rank_ktf"
+
+saveRDS(design_doro_rank, here("inst/benchdata/inputs/designs",
+                           "KnockTF_rank_design.rds"))
+
+doro_ktf_rank <- run_benchmark(here("inst/benchdata/inputs/designs",
+                         "KnockTF_rank_design.rds"))
+saveRDS(doro_ktf_rank, here(""))
+
+doro_ktf_res <- doro_ktf_rank %>%
+  bench_format() %>%
+  mutate(roc = activity %>%
+           map(calc_roc_curve))
+
+
+
+doro_ktf_sum <- doro_ktf_res %>%
+  bench_sumplot()
+
+saveRDS(doro_ktf_res, here("inst/benchdata/outputs/doro_ktf_rank.rds"))
+
+dbd_all_sum <- readRDS(here("inst/benchdata/outputs/dbd_all_sum.rds"))
+
+
+doro_ktf_summary <- doro_ktf_res %>%
+  select(name, regs, statistics, roc) %>%
+  bench_sumplot()
+
+
+
+
+# 4.4 Run Knock TF (p-value as activity) ----
+design_doro_pval <-readRDS(here("inst/benchdata/inputs/designs",
+                                "dorothea_ktf_design.rds"))
+design_doro_pval$bnch_expr <- here("inst/benchdata/inputs",
+                                   "KnockTF_pvalue_expr.rds")
+design_doro_pval$name <- "dorothea_pval_ktf"
+
+saveRDS(design_doro_pval, here("inst/benchdata/inputs/designs",
+                               "KnockTF_pval_design.rds"))
+
+
+doro_pval_run <- run_benchmark(here("inst/benchdata/inputs/designs",
+                   "KnockTF_pval_design.rds"))
+
+doro_pval_sum <- doro_pval_run %>%
+  bench_format() %>%
+  mutate(roc = activity %>%
+           map(calc_roc_curve))
+
+doro_pval_summary <- doro_pval_sum %>%
+  select(name, regs, statistics, roc) %>%
+  bench_sumplot()
 
 # 5. Summarize and Visualize output ----
-# Include options in design tibble
-# Change to statistic_time
-# use quotations for column names
-# p-values
+
+
