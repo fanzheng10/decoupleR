@@ -3,18 +3,23 @@
 #' @inheritParams format_design
 #' @param minsize regulon/gene set minimum number of targets/members
 #' @param format bool whether to format or not
+#' @param .confidence confidence levels/regulon names,etc
 #' @return A tibble with an appended activity column that corresponds
 #' to the activities calculated for each row of the design tibble
 run_benchmark <- function(design,
                           .minsize = 10,
-                          .format = T){
+                          .form = T,
+                          .confidence = "confidence" # enable a way to be NA
+                          ){
 
-  res <- design %>%
+  .confidence <- ensym(.confidence)
+
+  design %>%
     format_design() %>%
-    mutate(activity = pmap(., function(name, net_loc, regs,
-                                       gene_source, target, statistics,
-                                       bnch_expr, bench_meta,
-                                       net_bln, expr_bln, meta_bln, opts){
+    mutate(activity = pmap(. , function(name, net_loc, regs, gene_source,
+                                        target, statistics, bnch_expr,
+                                        bench_meta, net_bln, expr_bln,
+                                        meta_bln, opts){
 
       # Check conditions and load prerequisites
       if(!net_bln){
@@ -29,34 +34,34 @@ run_benchmark <- function(design,
 
       # filter network (to be changed and extended for additional filters)
       network_filtered <- network %>%
-        dplyr::filter(confidence %in% regs) %>%
-        distinct_at(vars(-confidence), .keep_all = T) %>%
-        group_by(tf) %>%
+        dplyr::filter((!!.confidence) %in% regs) %>%
+        distinct_at(vars(-(!!.confidence)), .keep_all = T) %>%
+        rename(.source = ensym(gene_source)) %>% #*
+        group_by(.source) %>%
         add_count() %>%
         filter(n >= .minsize) %>%
-        ungroup()
+        ungroup() %>%
+        rename(gene_source = .source) #* !!ensym(gene_source) not found
 
       # Print to track libs
       print(paste(name, paste0(unlist(regs), collapse=""), sep="_"))
 
       # Obtain Activity with decouple and format
       decouple(mat = gene_expression, network = network_filtered,
-               .source = all_of(gene_source), .target = target,
+               .source = gene_source, .target = target,
                statistics = statistics,
                .options = opts)  %>%
         dplyr::rename(id=condition) %>%
         inner_join(meta_data, by="id")  %>%
         group_split(statistic, .keep=T)
     })) %>% {
-      if(.format) bench_format(.) else .
+      if(.form) bench_format(.) else .
     }
-
-  return(res)
 }
 
 
-#' Load Design from JSON file and Format
-#'
+#' Helper Function to to generate the booleans used to check if the current
+#' locations/data objects are the same as the previous one
 #' @param design location of a json file with run design specifications
 #' @return a design tibble to be used in benchmarking
 format_design <- function(design){
@@ -67,7 +72,7 @@ format_design <- function(design){
 }
 
 
-#' Function that checks if the  preceding vector element is the same
+#' Helper Function that checks if the  preceding vector element is the same
 #' as the current element
 #'
 #' @param vector_loc char vector with directories
@@ -83,25 +88,30 @@ check_prereq <- function(vector_loc){
 }
 
 
-#' Function to format benchmarking results
+#' Helper function to format benchmarking results
 #'
 #' @param bench_res benchmarking results
 #' @returns formatted benchmarking results
 bench_format <- function(bench_res){
   res_format <- bench_res %>%
+    # get statistics names
     rowwise() %>%
     dplyr::mutate(statistics =
-                    list(flatten_chr(.$activity[[1]] %>%
+                    list(flatten_chr(.$activity[[1]] %>% # check if it works with different stat lists
                                        map(function(tib)
                                          unique((tib)$statistic))))) %>%
     unnest(c(activity, statistics)) %>%
-    mutate(statistic_time = activity %>% map(function(tib)
-      tib %>%
-        select(statistic_time) %>%
-        unique)) %>%
+    # get stat time
+    mutate(statistic_time = activity %>%
+             map(function(tib)
+               tib %>%
+                 select(statistic_time) %>%
+                 unique)) %>%
     unnest(statistic_time) %>%
+    # convert regulons to variable if list
     rowwise() %>%
     mutate(regs = paste0(unlist(regs), collapse = "")) %>%
+    # get regulon time
     group_by(name, regs) %>%
     mutate(regulon_time = sum(statistic_time)) %>%
     select(name, regs, statistics, activity, statistic_time, regulon_time)

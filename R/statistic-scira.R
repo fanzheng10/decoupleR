@@ -96,8 +96,7 @@ run_scira <- function(mat,
       score = scira_evaluate_model(.data$tf, .data$condition),
       .groups = "drop"
     ) %>%
-    transmute(statistic = "scira", .data$tf, .data$condition, .data$score,
-              stime=Sys.time())
+    transmute(statistic = "scira", .data$tf, .data$condition, .data$score)
 }
 
 #' Wrapper to run scira one tf (source) per sample (condition) at time
