@@ -147,20 +147,16 @@ bench_sumplot <- function(data, title = "") {
 
   roc <- apply(data, 1, function(df) {
     df$roc %>%
-    mutate(name = df$name,
+    mutate(name = df$row_name,
+           lvls = df$lvls,
            statistic = df$statistic) %>%
-    unite("row", name, statistic, remove = F)
+    unite("name_lvl", name, lvls, remove = F, sep = ".") %>%
+    unite("name_stat", name, statistic, remove = F)
   }) %>%
     do.call(rbind, .)
 
-  # TF Coverage
-  cov <- roc %>%
-    group_by(name) %>%
-    summarise(coverage) %>%
-    distinct()
-
   # Plot ROC
-  roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = row)) +
+  roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = name_stat)) +
     geom_line() +
     ggtitle(paste("ROC curve:", title)) +
     geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
@@ -170,12 +166,25 @@ bench_sumplot <- function(data, title = "") {
   # Extract AUROC
   auroc <- data %>%
     unnest(roc) %>%
-    select(name, statistic, auroc = auc) %>%
-    unite("row", name, statistic, remove = F) %>%
-    distinct()
+    select(row_name, lvls, statistic, auc) %>%
+    distinct() %>%
+    # join coverage
+    inner_join(x=.,
+               y=(roc %>%
+                    group_by(name_lvl) %>%
+                    summarise(cov = coverage) %>%
+                    distinct() %>%
+                    ungroup() %>%
+                    separate(col="name_lvl",
+                             into=c("row_name", "lvls"),
+                             sep="\\.")))
 
   # Plot AUROC
-  auroc_plot <- ggplot(auroc, aes(x = reorder(row, auroc), y = auroc, fill = row)) +
+  auroc_plot <- auroc %>%
+    unite("row_key", row_name, statistic, lvls, remove = F) %>%
+    ggplot(., aes(x = reorder(row_key, auc),
+                  y = auc,
+                  fill = row_key)) +
     geom_bar(stat = "identity") +
     ggtitle(paste("AUROC:", title)) +
     xlab("networks") +
@@ -185,8 +194,9 @@ bench_sumplot <- function(data, title = "") {
 
   # Plot AUROC heat
   auroc_heat <- auroc %>%
-    select(statistic, auroc, name) %>%
-    pivot_wider(names_from = name, values_from = auroc) %>%
+    select(statistic, auc, lvls, row_name) %>%
+    unite("name_lvl", row_name, lvls) %>%
+    pivot_wider(names_from = name_lvl, values_from = auc) %>%
     column_to_rownames(var = "statistic") %>%
     pheatmap(.,
              cluster_rows = F,
@@ -195,9 +205,9 @@ bench_sumplot <- function(data, title = "") {
              display_numbers = T)
 
 
-  out <- list(auroc ,cov, roc_plot, auroc_plot, auroc_heat)
-  names(out) <- c("auroc", "coverage", "roc_plot", "auroc_plot", "auroc_heat")
+  bench_summary <- list(auroc, roc_plot, auroc_plot, auroc_heat)
+  names(bench_summary) <- c("auroc_summary", "roc_plot", "auroc_plot", "auroc_heat")
 
-  return(out)
+  return(bench_summary)
 }
 

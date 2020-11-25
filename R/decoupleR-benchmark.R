@@ -1,41 +1,42 @@
 #' Benchmark gene sets with decouple
 #'
 #' @inheritParams format_design
-#' @param minsize regulon/gene set minimum number of targets/members
-#' @param format bool whether to format or not
-#' @param .confidence confidence levels/regulon names,etc
+#' @param .minsize regulon/gene set minimum number of targets/members
+#' @param .form bool whether to format or not
+#' @param .lvls column name in gene set/network resource that you wish to filter
+#' to, in relation to the lvls in design
 #' @return A tibble with an appended activity column that corresponds
 #' to the activities calculated for each row of the design tibble
 run_benchmark <- function(design,
                           .minsize = 10,
                           .form = T,
-                          .confidence = "confidence" # enable a way to be NA
+                          .lvls = "confidence"
                           ){
-
-  .confidence <- ensym(.confidence)
+  .lvls <- ensym(.lvls)
 
   design %>%
     format_design() %>%
-    mutate(activity = pmap(. , function(name, net_loc, regs, gene_source,
-                                        target, statistics, bnch_expr,
-                                        bench_meta, net_bln, expr_bln,
-                                        meta_bln, opts){
+    mutate(activity = pmap(.,
+                           .f=function(row_name, net_loc, lvls,
+                                       gene_source, target, statistics,
+                                       bnch_expr, bench_meta,
+                                       .net_bln, .expr_bln, .meta_bln, opts){
 
       # Check conditions and load prerequisites
-      if(!net_bln){
+      if(!.net_bln){
         .GlobalEnv$network <- readRDS(net_loc)
       }
-      if(!expr_bln){
+      if(!.expr_bln){
         .GlobalEnv$gene_expression <- readRDS(bnch_expr) %>% as.matrix()
       }
-      if(!meta_bln){
+      if(!.meta_bln){
         .GlobalEnv$meta_data <- readRDS(bench_meta)
       }
 
       # filter network (to be changed and extended for additional filters)
       network_filtered <- network %>%
-        dplyr::filter((!!.confidence) %in% regs) %>%
-        distinct_at(vars(-(!!.confidence)), .keep_all = T) %>%
+        dplyr::filter((!!.lvls) %in% lvls) %>%
+        distinct_at(vars(-(!!.lvls)), .keep_all = T) %>%
         rename(.source = ensym(gene_source)) %>% #*
         group_by(.source) %>%
         add_count() %>%
@@ -44,7 +45,7 @@ run_benchmark <- function(design,
         rename(gene_source = .source) #* !!ensym(gene_source) not found
 
       # Print to track libs
-      print(paste(name, paste0(unlist(regs), collapse=""), sep="_"))
+      print(paste(row_name, paste0(unlist(lvls), collapse=""), sep="_"))
 
       # Obtain Activity with decouple and format
       decouple(mat = gene_expression, network = network_filtered,
@@ -57,6 +58,8 @@ run_benchmark <- function(design,
     })) %>% {
       if(.form) bench_format(.) else .
     }
+
+  # returns, bench_output + roc, sum_output, and design used
 }
 
 
@@ -66,9 +69,9 @@ run_benchmark <- function(design,
 #' @return a design tibble to be used in benchmarking
 format_design <- function(design){
   design %>%
-    mutate(net_bln = net_loc %>% check_prereq(),
-           expr_bln = bnch_expr %>% check_prereq(),
-           meta_bln = bench_meta %>% check_prereq())
+    mutate(.net_bln = net_loc %>% check_prereq(),
+           .expr_bln = bnch_expr %>% check_prereq(),
+           .meta_bln = bench_meta %>% check_prereq())
 }
 
 
@@ -103,17 +106,17 @@ bench_format <- function(bench_res){
                  unique)) %>%
     unnest(statistic_time) %>%
     # calculate regulon size
-    group_by(name, regs) %>%
+    group_by(row_name, lvls) %>%
     mutate(regulon_time = sum(statistic_time)) %>%
-    # convert regs from character to string
+    # convert lvls from character to string
     rowwise() %>%
-    mutate(regs = paste0(unlist(regs), collapse = "")) %>%
+    mutate(lvls = paste0(unlist(lvls), collapse = "")) %>%
     ungroup() %>%
-    # get statistic name
+    # get statistic row_name
     mutate(statistic = activity %>%
              map(function(tib)
                unique(tib[["statistic"]]))) %>%
     unnest(statistic) %>%
-    select(name, regs, statistic, statistic_time, regulon_time, activity)
+    select(row_name, lvls, statistic, statistic_time, regulon_time, activity)
   return(res_format)
 }
