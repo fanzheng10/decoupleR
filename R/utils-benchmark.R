@@ -146,7 +146,10 @@ prepare_for_roc = function(df, filter_tn = F, ranked = F) {
 bench_sumplot <- function(data, title = "") {
 
   roc <- apply(data, 1, function(df) {
-    mutate(df$roc, name = df$name)
+    df$roc %>%
+    mutate(name = df$name,
+           statistic = df$statistic) %>%
+    unite("row", name, statistic, remove = F)
   }) %>%
     do.call(rbind, .)
 
@@ -157,7 +160,7 @@ bench_sumplot <- function(data, title = "") {
     distinct()
 
   # Plot ROC
-  roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = name)) +
+  roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = row)) +
     geom_line() +
     ggtitle(paste("ROC curve:", title)) +
     geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
