@@ -1,151 +1,140 @@
-#' This function calculates precision recall curves
-#'
-#' @param df run_method_viper() output
-#' @return tidy df containing recall, precision, auc, tp, tn and coverage
-calc_pr_curve = function(df) {
-  df = df %>% prepare_for_roc(., filter_tn = T)
-
-  feature_coverage = length(unique(df$tf))
-
-  tn = df %>% filter(response == 0)
-  tp = df %>% filter(response == 1)
-
-  r = pr.curve(scores.class0 = df$predictor,
-               weights.class0 = df$response,
-               curve=T)
-  res = r$curve %>%
-    as_tibble() %>%
-    setNames(., c("recall", "precision", "th")) %>%
-    mutate(auc = r$auc.davis.goadrich,
-           type = r$type,
-           n = sum(df$response),
-           tp = nrow(tp),
-           tn = nrow(tn),
-           coverage = feature_coverage) %>%
-    arrange(recall, desc(precision))
+#' Helper Function to to generate the booleans used to check if the current
+#' locations/data objects are the same as the previous one
+#' @param design location of a json file with run design specifications
+#' @return a design tibble to be used in benchmarking
+format_design <- function(design){
+  design %>%
+    mutate(.net_bln = net_loc %>% check_prereq(),
+           .expr_bln = bnch_expr %>% check_prereq(),
+           .meta_bln = bench_meta %>% check_prereq())
 }
 
 
-#' This function calculates receiver operating characteristic
+#' Helper Function that checks if the  preceding vector element is the same
+#' as the current element
 #'
-#' @param df run_method_viper() output
-#' @param downsampling logical flag indicating if the number of TN should be
-#'   downsampled to the number of TP
-#' @param times integer showing the number of downsampling
-#' @param ranked logical flag indicating if input is derived from composite
-#'   ranking that already took up-/downregulation (sign) into account
-#'
-#' @return tidy data frame with tpr, fpr, auc, n, tp, tn and coverage
-#'
-#' @import yardstick
-calc_roc_curve = function(df, downsampling = F, times = 1000, ranked = F) {
-
-  library(yardstick)
-
-  if (ranked == T) {
-    df = df %>% prepare_for_roc(., filter_tn = T, ranked = T)
-  } else {
-    df = df %>%
-      prepare_for_roc(., filter_tn = T, ranked = F)
-  }
-
-  if (length(which(df$response == 0)) == nrow(df)){
-    return(as_tibble(NULL))
-  }
-
-  tn = df %>% filter(response == 0)
-  tp = df %>% filter(response == 1)
-
-  feature_coverage = length(unique(df$tf))
-
-  if (downsampling == T) {
-    # number of true positives
-    num_tp = nrow(tp)
-
-    res = map_df(seq(from=1, to=times, by=1), function(i) {
-      df_sub = sample_n(tn, num_tp, replace=TRUE) %>%
-        bind_rows(tp)
-
-      r_sub = df_sub %>%
-        roc_curve(response, predictor)
-      auc = df_sub %>%
-        roc_auc(response, predictor) %>%
-        select(.estimate)
-
-      res_sub = tibble(tpr = r_sub$sensitivities,
-                       fpr = 1-r_sub$specificities,
-                       th = r_sub$thresholds,
-                       auc = r_sub$auc,
-                       n = length(which(df$response == 1)),
-                       tp = nrow(tp),
-                       tn = nrow(tn),
-                       coverage = feature_coverage) %>%
-        mutate_("run" = i)
-
-    })
-  } else {
-    r = df %>%
-      roc_curve(response, predictor)
-    auc = df %>%
-      roc_auc(response, predictor)
-
-    res = tibble(tpr = r$sensitivity,
-                 fpr = 1-r$specificity,
-                 th = r$.threshold,
-                 auc = auc$.estimate,
-                 n = length(which(df$response == 1)),
-                 tp = nrow(tp),
-                 tn = nrow(tn),
-                 coverage = feature_coverage) %>%
-      arrange(fpr, tpr)
-
-  }
-  return(res)
-}
-
-
-#' This function takes the result from viper
-#' and prepares the data frame for roc/pr curve analysis. For each TF-experiment
-#' combination a response and a predictor value is generated.
-#'
-#' @param df run_method_viper() output
-#' @param filter_tn logical flag indicating if unnecessary true negatives should
-#'   be filtered out (unnecessary means that there are no true positives for a
-#'   given tf)
-#' @param ranked logical flag indicating if input is derived from composite
-#'   ranking that already took up-/downregulation (sign) into account
-#'
-#' @return tidy data frame with meta information for each experiment and the
-#'   response and the predictor value which are required for roc curve analysis
-prepare_for_roc = function(df, filter_tn = F, ranked = F) {
-  res = df %>%
-    dplyr::mutate(response = case_when(tf == target ~ 1,
-                                       tf != target ~ 0),
-                  predictor =  case_when(ranked == F ~ score*sign,
-                                         ranked == T ~ score))
-  res$response = factor(res$response, levels = c(1, 0))
-
-  if (filter_tn == TRUE) {
-    # Only TF which are perturbed and predicted are considered
-    z = intersect(res$tf, res$target)
-    res = res %>%
-      filter(tf %in% z, target %in% z)
-  }
-  res %>%
-    select(c(tf, id, response, predictor))
-}
-
-
-#' S4 Class used to format benchmark wrapper results.
-#'
-#' @slot bench_res Formatted or non-formatted Benchmark results
-#' @slot summary Summary return by the bench_sumplot function
-#' @slot design The input design tibble used to generate the results
-#'
-#' @name BenchResult-class
-#' @rdname BenchResult-class
+#' @param vector_loc char vector with directories
+#' @return logical values describing whether the location of the loaded files
+#' has changes
 #' @export
-setClass("BenchResult",
-         slots=list(bench_res="tbl_df",
-                    summary="list",
-                    design="tbl_df"))
+check_prereq <- function(vector_loc){
+  tib_loc <- tibble(current=vector_loc, behind=lag(vector_loc))
+
+  pmap_lgl(tib_loc, function(behind, current){
+    ifelse(is.na(behind) || behind!=current, FALSE, TRUE)
+  })
+}
+
+
+
+#' Helper function to format benchmarking results
+#'
+#' @param bench_res benchmarking results
+#' @returns formatted benchmarking results
+bench_format <- function(bench_res){
+  res_format <- bench_res %>%
+    unnest(activity) %>%
+    # get statistic time from activity
+    mutate(statistic_time = activity %>%
+             map(function(tib)
+               tib %>%
+                 select(statistic_time) %>%
+                 unique)) %>%
+    unnest(statistic_time) %>%
+    # calculate regulon size
+    group_by(row_name, lvls) %>%
+    mutate(regulon_time = sum(statistic_time)) %>%
+    # convert lvls from character to string
+    rowwise() %>%
+    mutate(lvls = paste0(unlist(lvls), collapse = "")) %>%
+    ungroup() %>%
+    # get statistic row_name
+    mutate(statistic = activity %>%
+             map(function(tib)
+               unique(tib[["statistic"]]))) %>%
+    unnest(statistic) %>%
+    select(row_name, lvls, statistic, statistic_time, regulon_time, activity)
+  return(res_format)
+}
+
+
+
+#' Function that provides summary and plots for the benchmark run
+#'
+#' @param .res_tible formatted bench result tible with added roc column
+#' @param title character string for title of plots
+#' @return AUROC summary per row with TF coverage, ROC AUROC, Heatmap plots
+#' @import ggplot2, pheatmap
+bench_sumplot <- function(.res_tible, title = "") {
+
+  .res_tible <- .res_tible %>%
+    select(row_name, lvls, statistic, roc)
+
+  roc <- apply(.res_tible, 1, function(df) {
+    df$roc %>%
+      mutate(name = df$row_name,
+             lvls = df$lvls,
+             statistic = df$statistic) %>%
+      unite("name_lvl", name, lvls, remove = F, sep = ".") %>%
+      unite("run_key", name, statistic, lvls, remove = F)
+  }) %>%
+    do.call(rbind, .)
+
+  # Plot ROC
+  roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = run_key)) +
+    geom_line() +
+    ggtitle(paste("ROC curve:", title)) +
+    geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+    xlab("FPR (1-specificity)") +
+    ylab("TPR (sensitivity)")
+
+  # Extract AUROC
+  auroc <- .res_tible %>%
+    unnest(roc) %>%
+    select(row_name, lvls, statistic, auc) %>%
+    distinct() %>%
+    # join coverage
+    inner_join(x=.,
+               y=(roc %>%
+                    group_by(name_lvl) %>%
+                    summarise(cov = coverage) %>%
+                    distinct() %>%
+                    ungroup() %>%
+                    separate(col="name_lvl",
+                             into=c("row_name", "lvls"),
+                             sep="\\.")))
+
+
+  # Plot AUROC
+  auroc_plot <- auroc %>%
+    unite("run_key", row_name, statistic, lvls, remove = F) %>%
+    ggplot(., aes(x = reorder(run_key, auc),
+                  y = auc,
+                  fill = run_key)) +
+    geom_bar(stat = "identity") +
+    ggtitle(paste("AUROC:", title)) +
+    xlab("networks") +
+    ylab("AUROC") +
+    coord_flip(ylim = c(0.5, 0.8)) +
+    theme(legend.position = "none")
+
+
+  # Plot AUROC heat
+  auroc_heat <- auroc %>%
+    select(statistic, auc, lvls, row_name) %>%
+    unite("name_lvl", row_name, lvls) %>%
+    pivot_wider(names_from = name_lvl, values_from = auc) %>%
+    column_to_rownames(var = "statistic") %>%
+    pheatmap(.,
+             cluster_rows = F,
+             treeheight_col = 0,
+             treeheight_row = 0,
+             display_numbers = T,
+             silent = T)
+
+
+  bench_summary <- list(auroc, roc_plot, auroc_plot, auroc_heat)
+  names(bench_summary) <- c("auroc_summary", "roc_plot", "auroc_plot", "auroc_heat")
+
+  return(bench_summary)
+}
