@@ -2,19 +2,20 @@
 #'
 #' @inheritParams format_design
 #' @param .minsize regulon/gene set minimum number of targets/members
-#' @param .form bool whether to format or not
 #' @param .lvls column name in gene set/network resource that you wish to filter
 #' to, in relation to the lvls in design
-#' @return A tibble with an appended activity column that corresponds
-#' to the activities calculated for each row of the design tibble
+#' @param .form bool whether to format or not
+#' @param .perform bool whether to calculate roc and performance summary
+#' @return An S4 object of class BenchResult
 run_benchmark <- function(design,
                           .minsize = 10,
+                          .lvls = "confidence",
                           .form = T,
-                          .lvls = "confidence"
+                          .perform = T
                           ){
   .lvls <- ensym(.lvls)
 
-  design %>%
+  res <- design %>%
     format_design() %>%
     mutate(activity = pmap(.,
                            .f=function(row_name, net_loc, lvls,
@@ -56,10 +57,26 @@ run_benchmark <- function(design,
         inner_join(meta_data, by="id")  %>%
         group_split(statistic, .keep=T)
     })) %>% {
-      if(.form) bench_format(.) else .
+      if(.form & !.perform) bench_format(.)
+      else if(.form & .perform) bench_format(.) %>%
+        mutate(roc = activity %>% map(calc_roc_curve))
+      else .
     }
 
-  # returns, bench_output + roc, sum_output, and design used
+  # handle return
+  if(.form & .perform){
+    bench_result <-new("BenchResult",
+                       bench_res=res,
+                       summary=res %>% bench_sumplot(),
+                       design=design_d)
+  }
+  else{
+    bench_result <-new("BenchResult",
+                       bench_res=res,
+                       summary=list(NULL),
+                       design=design_d)
+  }
+  return(bench_result)
 }
 
 
@@ -119,4 +136,86 @@ bench_format <- function(bench_res){
     unnest(statistic) %>%
     select(row_name, lvls, statistic, statistic_time, regulon_time, activity)
   return(res_format)
+}
+
+
+
+#' Function that provides summary
+#'
+#' @param .res_tible formatted bench result tible with added roc column
+#' @param title character string for title of plots
+#' @return AUROC summary per row with TF coverage, ROC AUROC, Heatmap plots
+#' @import ggplot2, pheatmap
+bench_sumplot <- function(.res_tible, title = "") {
+
+  .res_tible <- .res_tible %>%
+    select(row_name, lvls, statistic, roc)
+
+  roc <- apply(.res_tible, 1, function(df) {
+    df$roc %>%
+      mutate(name = df$row_name,
+             lvls = df$lvls,
+             statistic = df$statistic) %>%
+      unite("name_lvl", name, lvls, remove = F, sep = ".") %>%
+      unite("run_key", name, statistic, lvls, remove = F)
+  }) %>%
+    do.call(rbind, .)
+
+  # Plot ROC
+  roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = run_key)) +
+    geom_line() +
+    ggtitle(paste("ROC curve:", title)) +
+    geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+    xlab("FPR (1-specificity)") +
+    ylab("TPR (sensitivity)")
+
+  # Extract AUROC
+  auroc <- .res_tible %>%
+    unnest(roc) %>%
+    select(row_name, lvls, statistic, auc) %>%
+    distinct() %>%
+    # join coverage
+    inner_join(x=.,
+               y=(roc %>%
+                    group_by(name_lvl) %>%
+                    summarise(cov = coverage) %>%
+                    distinct() %>%
+                    ungroup() %>%
+                    separate(col="name_lvl",
+                             into=c("row_name", "lvls"),
+                             sep="\\.")))
+
+
+  # Plot AUROC
+  auroc_plot <- auroc %>%
+    unite("run_key", row_name, statistic, lvls, remove = F) %>%
+    ggplot(., aes(x = reorder(run_key, auc),
+                  y = auc,
+                  fill = run_key)) +
+    geom_bar(stat = "identity") +
+    ggtitle(paste("AUROC:", title)) +
+    xlab("networks") +
+    ylab("AUROC") +
+    coord_flip(ylim = c(0.5, 0.8)) +
+    theme(legend.position = "none")
+
+
+  # Plot AUROC heat
+  auroc_heat <- auroc %>%
+    select(statistic, auc, lvls, row_name) %>%
+    unite("name_lvl", row_name, lvls) %>%
+    pivot_wider(names_from = name_lvl, values_from = auc) %>%
+    column_to_rownames(var = "statistic") %>%
+    pheatmap(.,
+             cluster_rows = F,
+             treeheight_col = 0,
+             treeheight_row = 0,
+             display_numbers = T,
+             silent = T)
+
+
+  bench_summary <- list(auroc, roc_plot, auroc_plot, auroc_heat)
+  names(bench_summary) <- c("auroc_summary", "roc_plot", "auroc_plot", "auroc_heat")
+
+  return(bench_summary)
 }

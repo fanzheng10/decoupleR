@@ -136,78 +136,16 @@ prepare_for_roc = function(df, filter_tn = F, ranked = F) {
 }
 
 
-#' FUNCTION: Plot ROC curve and AUROC
+#' S4 Class used to format benchmark wrapper results.
 #'
-#' @param data
-#' @param title character string for title of plots
-#' @param coverage print TF coverage (TRUE/FALSE)
-#' @return AUROC, TF coverage (optional), ROC AUROC, Heatmap plots
-#' @import ggplot2, pheatmap
-bench_sumplot <- function(data, title = "") {
-
-  roc <- apply(data, 1, function(df) {
-    df$roc %>%
-    mutate(name = df$row_name,
-           lvls = df$lvls,
-           statistic = df$statistic) %>%
-    unite("name_lvl", name, lvls, remove = F, sep = ".") %>%
-    unite("name_stat", name, statistic, remove = F)
-  }) %>%
-    do.call(rbind, .)
-
-  # Plot ROC
-  roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = name_stat)) +
-    geom_line() +
-    ggtitle(paste("ROC curve:", title)) +
-    geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
-    xlab("FPR (1-specificity)") +
-    ylab("TPR (sensitivity)")
-
-  # Extract AUROC
-  auroc <- data %>%
-    unnest(roc) %>%
-    select(row_name, lvls, statistic, auc) %>%
-    distinct() %>%
-    # join coverage
-    inner_join(x=.,
-               y=(roc %>%
-                    group_by(name_lvl) %>%
-                    summarise(cov = coverage) %>%
-                    distinct() %>%
-                    ungroup() %>%
-                    separate(col="name_lvl",
-                             into=c("row_name", "lvls"),
-                             sep="\\.")))
-
-  # Plot AUROC
-  auroc_plot <- auroc %>%
-    unite("row_key", row_name, statistic, lvls, remove = F) %>%
-    ggplot(., aes(x = reorder(row_key, auc),
-                  y = auc,
-                  fill = row_key)) +
-    geom_bar(stat = "identity") +
-    ggtitle(paste("AUROC:", title)) +
-    xlab("networks") +
-    ylab("AUROC") +
-    coord_flip(ylim = c(0.5, 0.8)) +
-    theme(legend.position = "none")
-
-  # Plot AUROC heat
-  auroc_heat <- auroc %>%
-    select(statistic, auc, lvls, row_name) %>%
-    unite("name_lvl", row_name, lvls) %>%
-    pivot_wider(names_from = name_lvl, values_from = auc) %>%
-    column_to_rownames(var = "statistic") %>%
-    pheatmap(.,
-             cluster_rows = F,
-             treeheight_col = 0,
-             treeheight_row = 0,
-             display_numbers = T)
-
-
-  bench_summary <- list(auroc, roc_plot, auroc_plot, auroc_heat)
-  names(bench_summary) <- c("auroc_summary", "roc_plot", "auroc_plot", "auroc_heat")
-
-  return(bench_summary)
-}
-
+#' @slot bench_res Formatted or non-formatted Benchmark results
+#' @slot summary Summary return by the bench_sumplot function
+#' @slot design The input design tibble used to generate the results
+#'
+#' @name BenchResult-class
+#' @rdname BenchResult-class
+#' @export
+setClass("BenchResult",
+         slots=list(bench_res="tbl_df",
+                    summary="list",
+                    design="tbl_df"))
