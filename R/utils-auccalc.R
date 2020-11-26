@@ -28,7 +28,7 @@ calc_pr_curve = function(df) {
 
 #' This function calculates receiver operating characteristic
 #'
-#' @param df run_method_viper() output
+#' @param df run_benchmark roc column provided as input
 #' @param downsampling logical flag indicating if the number of TN should be
 #'   downsampled to the number of TP
 #' @param times integer showing the number of downsampling

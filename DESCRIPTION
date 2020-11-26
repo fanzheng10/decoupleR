@@ -43,7 +43,9 @@ Suggests:
     pkgdown,
     rmarkdown,
     roxygen2,
-    testthat
+    testthat,
+    pheatmap,
+    ggplot2
 VignetteBuilder: 
     knitr
 biocViews:

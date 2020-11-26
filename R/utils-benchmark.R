@@ -1,7 +1,9 @@
+# Helper functions for run_benchmark ----
 #' Helper Function to to generate the booleans used to check if the current
 #' locations/data objects are the same as the previous one
 #' @param design location of a json file with run design specifications
 #' @return a design tibble to be used in benchmarking
+#' @export
 format_design <- function(design){
   design %>%
     mutate(.net_bln = net_loc %>% check_prereq(),
@@ -26,11 +28,12 @@ check_prereq <- function(vector_loc){
 }
 
 
-
-#' Helper function to format benchmarking results
+# Downstream reformatting ----
+#' Function to format benchmarking results
 #'
 #' @param bench_res benchmarking results
 #' @returns formatted benchmarking results
+#' @export
 bench_format <- function(bench_res){
   res_format <- bench_res %>%
     unnest(activity) %>%
@@ -130,7 +133,8 @@ bench_sumplot <- function(.res_tible, title = "") {
              treeheight_col = 0,
              treeheight_row = 0,
              display_numbers = T,
-             silent = T)
+             silent = T,
+             cluster_cols=F)
 
 
   bench_summary <- list(auroc, roc_plot, auroc_plot, auroc_heat)

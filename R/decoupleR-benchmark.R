@@ -7,6 +7,7 @@
 #' @param .form bool whether to format or not
 #' @param .perform bool whether to calculate roc and performance summary
 #' @return An S4 object of class BenchResult
+#' @import ggplot2, pheatmap
 run_benchmark <- function(design,
                           .minsize = 10,
                           .lvls = "confidence",
