@@ -69,13 +69,13 @@ run_benchmark <- function(design,
     bench_result <-new("BenchResult",
                        bench_res=res,
                        summary=res %>% bench_sumplot(),
-                       design=design_d)
+                       design=design)
   }
   else{
     bench_result <-new("BenchResult",
                        bench_res=res,
                        summary=list(NULL),
-                       design=design_d)
+                       design=design)
   }
   return(bench_result)
 }
