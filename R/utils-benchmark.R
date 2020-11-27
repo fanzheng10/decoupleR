@@ -56,7 +56,11 @@ bench_format <- function(bench_res){
              map(function(tib)
                unique(tib[["statistic"]]))) %>%
     unnest(statistic) %>%
-    select(row_name, lvls, statistic, statistic_time, regulon_time, activity)
+    select(row_name, lvls, statistic, statistic_time, regulon_time, activity) %>%
+    mutate(activity = activity %>%
+           map(function(tib) tib %>%
+                 mutate_at(vars(score), ~replace(., is.infinite(.), 0))
+           ))
   return(res_format)
 }
 
@@ -95,18 +99,7 @@ bench_sumplot <- function(.res_tible, title = "") {
   auroc <- .res_tible %>%
     unnest(roc) %>%
     select(row_name, lvls, statistic, auc) %>%
-    distinct() %>%
-    # join coverage
-    inner_join(x=.,
-               y=(roc %>%
-                    group_by(name_lvl) %>%
-                    summarise(cov = coverage) %>%
-                    distinct() %>%
-                    ungroup() %>%
-                    separate(col="name_lvl",
-                             into=c("row_name", "lvls"),
-                             sep="\\.")))
-
+    distinct()
 
   # Plot AUROC
   auroc_plot <- auroc %>%
@@ -127,7 +120,7 @@ bench_sumplot <- function(.res_tible, title = "") {
     select(statistic, auc, lvls, row_name) %>%
     unite("name_lvl", row_name, lvls) %>%
     pivot_wider(names_from = name_lvl, values_from = auc) %>%
-    column_to_rownames(var = "statistic") %>%
+    column_to_rownames(var = "statistic")  %>%
     pheatmap(.,
              cluster_rows = F,
              treeheight_col = 0,
@@ -137,7 +130,19 @@ bench_sumplot <- function(.res_tible, title = "") {
              cluster_cols=F)
 
 
-  bench_summary <- list(auroc, roc_plot, auroc_plot, auroc_heat)
+  # join coverage
+  auroc_summary <- auroc %>%
+  inner_join(x=.,
+             y=(roc %>%
+                  group_by(name_lvl) %>%
+                  summarise(cov = coverage) %>%
+                  distinct() %>%
+                  ungroup() %>%
+                  separate(col="name_lvl",
+                           into=c("row_name", "lvls"),
+                           sep="\\.")))
+
+  bench_summary <- list(auroc_summary, roc_plot, auroc_plot, auroc_heat)
   names(bench_summary) <- c("auroc_summary", "roc_plot", "auroc_plot", "auroc_heat")
 
   return(bench_summary)
