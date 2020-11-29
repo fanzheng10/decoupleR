@@ -1,9 +1,16 @@
-#' This is a Design tibble with all networks, stats, and benchmarks.
-#' To be used as default input and changed according to the run in mind.
+#' Design tibble with all networks, stats, and benchmarks.
+#'
+#' @description To be used as default input or as a starting point and
+#'  modified according to the benchmark run in mind.
 #'
 #' @name design_all
+#'
 #' @docType data
-#' @usage data(design_all)
+#'
+#' @format A tibble with locations, options, and filter options for the desired benchmark setting
+#'
+#' @usage readRDS(system.file("benchdata/inputs", "design_all.rds" , package = "decoupleR"))
+#'
 #' \describe{
 #' \item{row_name}{user-defined name of row/run - e.g. network + benchmark data}
 #' \item{net_loc}{location of the network/gene set resource}
@@ -17,12 +24,8 @@
 #'    different experiments - e.g. type of method, cell type, etc.)}
 #' \item{opts}{named list to be used to pass the options for each statistic}
 #' }
-"designs_all"
-
-#' @importFrom tibble tibble
 #'
+#' @importFrom tibble tibble
 #' @details Read and executed in a row-wise manner. Say that this can also
 #' be used with different type of gene set resources (e.g. KEGG, GO, etc)
-#'
-# readRDS(system.file("extdata", "design_all.rds" , package = "decoupleR"))
-# data(design_all.rds)
+NULL

@@ -71,7 +71,8 @@ bench_format <- function(bench_res){
 #' @param .res_tible formatted bench result tible with added roc column
 #' @param title character string for title of plots
 #' @return AUROC summary per row with TF coverage, ROC AUROC, Heatmap plots
-#' @import ggplot2, pheatmap
+#' @import ggplot2
+#' @import pheatmap
 bench_sumplot <- function(.res_tible, title = "") {
 
   .res_tible <- .res_tible %>%

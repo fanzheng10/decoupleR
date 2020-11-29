@@ -1,8 +1,9 @@
-#' S4 Class used to format benchmark wrapper results.
+#' S4 Class used to format benchmark output.
 #'
-#' @slot bench_res Formatted or non-formatted Benchmark results
-#' @slot summary Summary returned by the bench_sumplot function
-#' @slot design The input design tibble used to generate the results
+#' @slot bench_res Formatted or non-formatted Benchmark output
+#' @slot summary Summary returned by the bench_sumplot functions - it countains
+#' auroc and coverage summary table, roc plot, and auroc heatmap and barplot
+#' @slot design The input design tibble used to generate the benchmark results
 #'
 #' @name BenchResult-class
 #' @rdname BenchResult-class
