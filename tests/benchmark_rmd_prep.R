@@ -389,7 +389,7 @@ saveRDS(designs, file.path(bench_input, "design_all.rds"))
 
 
 # 4. Generate Random Networks ----
-# 4.1. Random regulons for Dorothea (My approach) ====
+# 4.1. Random regulons for Dorothea (Resampled) ====
 dorothea_filtered <- readRDS(file.path(bench_input, "networks",
                                        "dorothea_filtered.rds"))
 

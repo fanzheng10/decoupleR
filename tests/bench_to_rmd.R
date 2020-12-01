@@ -113,13 +113,10 @@ ktf_rank_res@summary$auroc_heat
 # 4. Run with Random regulons for Dorothea regulons ----
 # Random regulons should have the same gene coverage and exclude the TP genes
 
-# 4.1. Dorothea vs Random Dorothea DBD RUN ----
-# Filter run dorothea only with both benchmarks
+# 4.1. Dorothea vs Random Dorothea RUN ----
+# Filter design for dorothea only with both benchmarks
 design_doro <- design_all %>%
   filter(str_detect(row_name,"dorothea"))
-
-# check if correct
-design_doro$row_name
 
 # replace network
 design_rand <- design_doro %>%
@@ -130,9 +127,9 @@ design_rand <- design_doro %>%
   unnest(row_name)
 
 # check if OK
-View(design_rand)
+design_rand
 
-# # modify design_dbd
+# # Run Benchmark
 # dor_rand_res <- run_benchmark(design_rand)
 # saveRDS(dor_rand_res, file.path(bench_output, "dor_rand_res.rds"))
 
@@ -159,6 +156,7 @@ design_birewire <- design_doro %>%
                          "dor_birew_ktf", "dor_birew_ktf", "dor_birew_ktf")) %>%
   unnest(row_name)
 
+# Run Benchmark
 # dor_birewire_res <- run_benchmark(design_birewire)
 # saveRDS(dor_birewire_res, file.path(bench_output, "dor_birewire_res.rds"))
 dor_birewire_res <- readRDS(file.path(bench_output, "dor_birewire_res.rds"))

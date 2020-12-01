@@ -5,8 +5,8 @@
 #' auroc and coverage summary table, roc plot, and auroc heatmap and barplot
 #' @slot design The input design tibble used to generate the benchmark results
 #'
-#' @name BenchResult-class
-#' @rdname BenchResult-class
+#' @name BenchResult
+#' @rdname BenchResult
 #' @export
 setClass("BenchResult",
          slots=list(bench_res="tbl_df",

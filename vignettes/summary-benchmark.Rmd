@@ -1,0 +1,363 @@
+---
+title: "decoupleR Benchmarking Summary"
+author: "Daniel Dimitrov"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(warning = FALSE)
+library(devtools)
+library(decoupleR)
+library(tidyverse)
+library(pheatmap)
+library(ggplot2)
+library(here)
+bench_input <- here("inst", "benchdata", "inputs")
+bench_output <- here("inst", "benchdata", "outputs")
+```
+
+
+## I. Intro
+This markdown is intended as an internal summary of the comparison between network resources DoRothEA, RegNetwork, and ChEA3. The markdown also serves as a brief overview of the benchmarking pipeline in decoupleR.
+
+### 1. Pipeline Input
+The benchmark pipeline requires an [input tibble](#input_tibble) with a number of user-specified settings.
+Each row in the design tibble corresponds to a benchmark run with different parameters. 
+These parameters include the absolute locations of networks and benchmark data as well as the statistical methods and network filtering criteria.
+\
+The ease of use and flexibility of this approach is demonstrated here - e.g. to run the pipeline with a new network resource only requires the network location to be changed. This also applies to the statistical methods and their settings, confidence levels, and benchmark data sets (given they are in the appropriate format).
+\
+
+### 2. Pipeline Output
+The output of the pipeline is a [pre-defined object](#benchResult) with benchmark results,
+summary, and input tibble.
+\
+
+### 3. Data and Network Prep
+Regulatory networks were pre-filtered and pre-formatted, in this case, in a separate R script.
+Pre-filtering excluded putative TFs according to Lambert et al., 2018. Please refer to the [following script](https://github.com/saezlab/decoupleR/blob/devel-bnchmrk/tests/benchmark_rmd_prep.R) for more information about the filtering and formatting of benchmark data,
+network resources, and random network generation.
+\
+Further development of the pipeline would include the implementation of multiple filtering criteria, thus the network pre-filtering/formatting step would be done as part of the pipeline.
+\
+
+### 4. Outlook
+The complete development of the pipeline would enable the statistical methods
+implemented in decoupleR to be used with any network or any other 
+gene set resource.
+\
+\
+
+## II. Benchmark Runs
+### 0. Default Settings
+Note that the benchmark runs presented here were done with the following (default) settings:
+\
+- The minimum regulon size was set to 10 (.minsize = 10); \
+- The name of the column by which we filter was set to "confidence" (.lvls = "confidence");
+\
+- The benchmarking output was formatted (.form = T) and AUROC results are calculated with a number of summary plots produced (.perform = T).
+\
+\
+Also, please note that fgsea and singscore were not included in the benchmark
+runs presented here, due to reproduciblity and computational time reasons.
+However, they will be included soon, despite the aforementioned points.
+\
+
+### 1. Run DoRothEA Benchmark Data **(DBD)** with all stats and network combinations
+```{r dbd_form}
+# Load tibble with with all combinations
+design_all <- readRDS(file.path(bench_input, "design_all.rds"))
+
+# Explore design tibble with all possible options (incl. Knock TF)
+design_all %>%
+  rmarkdown::paged_table()
+
+# Filter for runs/rows only with DBD
+design_dbd <- design_all %>%
+  filter(endsWith(row_name,"dbd"))
+
+# Check if correct
+design_dbd %>%
+  rmarkdown::paged_table()
+```
+\
+
+```{r dbd_run}
+# # Run Benchmark
+# dbd_res <- run_benchmark(design_dbd)
+
+# # Save results
+# saveRDS(dbd_res, file.path(bench_output, "dbd_res.rds"))
+
+# Save Summary
+# saveRDS(dbd_res@summary,
+#         file.path(bench_output, "summary", "dbd_res_summary.rds"))
+
+
+# Load Results and Check Summary
+dbd_res <- readRDS(file.path(bench_output, "dbd_res.rds"))
+
+# Benchmark Summary Table
+dbd_res@summary$auroc_summary %>%
+  rmarkdown::paged_table()
+
+# Heatmap with AUC values
+dbd_res@summary$auroc_heat
+```
+\
+
+### 2. Run Knock TF Benchmark Data **(KTF)** with all stats and network combinations
+```{r ktf_form}
+# Filter runs only with KTF
+design_ktf <- design_all %>%
+  filter(endsWith(row_name,"ktf"))
+
+# Check if correct
+design_ktf %>%
+  rmarkdown::paged_table()
+```
+\
+
+
+```{r ktf_run}
+# Run benchmark
+# ktf_res <- run_benchmark(design_ktf)
+
+# Save Results
+# saveRDS(ktf_res, file.path(bench_output, "ktf_res.rds"))
+
+# Save Summary
+# saveRDS(ktf_res@summary,
+#         file.path(bench_output, "summary", "ktf_res_summary.rds")) 
+
+# Load Results and Check Summary
+ktf_res <- readRDS(file.path(bench_output, "ktf_res.rds"))
+
+# Benchmark Results Summary
+ktf_res@summary$auroc_summary %>%
+  rmarkdown::paged_table()
+
+# Heatmap with AUC values
+ktf_res@summary$auroc_heat 
+```
+\
+
+```{r clearthis1, results='hide', message=FALSE}
+rm(ktf_res)
+rm(dbd_res)
+```
+\
+
+### 3. Run Benchmark with Randomized Dorothea using BiRewire
+[BiRewire](https://saezlab.github.io/BiRewire/) is a Network Rewiring R package based on the Switching algorithm and here it was used to reshuffle the directed nodes associated with each TF in DoRothEA.
+This was done to obtain a random baseline network equivalent to DoRothEA.
+
+```{r birewire_form}
+# Filter only runs/rows with dorothea
+design_doro <- design_all %>%
+  filter(str_detect(row_name,"dorothea"))
+
+# replace network location and row names
+design_birewire <- design_doro %>%
+  mutate(net_loc = file.path(bench_input,
+                             "networks", "dorothea_birewire.rds"),
+         row_name = list("dor_birew_dbd", "dor_birew_dbd", "dor_birew_dbd",
+                         "dor_birew_ktf", "dor_birew_ktf", "dor_birew_ktf")) %>%
+  unnest(row_name)
+
+# Check if correct
+design_birewire %>%
+  rmarkdown::paged_table()
+```
+\
+
+```{r birewire_run}
+# # Run Benchmark
+# dor_birewire_res <- run_benchmark(design_birewire)
+
+# # Save Results
+# saveRDS(dor_birewire_res, file.path(bench_output, "dor_birewire_res.rds"))
+
+# # Save Summary
+# saveRDS(dor_birewire_res@summary,
+#         file.path(bench_output, "summary", "dor_birewire_res_summary.rds"))
+
+# Load Results
+dor_birewire_res <- readRDS(file.path(bench_output, "dor_birewire_res.rds"))
+
+# Benchmark Results
+dor_birewire_res@bench_res %>%
+  rmarkdown::paged_table()
+
+# Benchmark Summary
+dor_birewire_res@summary$auroc_summary %>%
+  rmarkdown::paged_table()
+```
+\
+
+### 3.1. Combine BiRewire results with DBD Run
+
+```{r birewire_combine_dbd}
+# Load BiRewire summary
+birewire_sum <- readRDS(file.path(bench_output,
+                          "summary", "dor_birewire_res_summary.rds"))
+
+# load DBD summary and append BiRewire results for DBD
+dbd_sum <- readRDS(file.path(bench_output,
+                             "summary", "dbd_res_summary.rds"))
+
+dbd_summary_auroc <- bind_rows((birewire_sum$auroc_summary %>%
+  filter(str_detect(row_name,"dbd"))),
+  dbd_sum$auroc_summary)
+
+# Generate Auroc Heatmap
+dbd_auroc_heatmap <- dbd_summary_auroc %>%
+    select(statistic, auc, lvls, row_name) %>%
+    unite("name_lvl", row_name, lvls) %>%
+    pivot_wider(names_from = name_lvl, values_from = auc) %>%
+    column_to_rownames(var = "statistic")  %>%
+    pheatmap(.,
+             cluster_rows = F,
+             treeheight_col = 0,
+             treeheight_row = 0,
+             display_numbers = T,
+             silent = T,
+             cluster_cols=F)
+  
+dbd_auroc_heatmap
+```
+\
+
+### 3.2. Combine BiRewire results with KTF Run
+
+```{r birewire_combine_ktf}
+# load KTF summary and append BiRewire results for KTF
+ktf_sum <- readRDS(file.path(bench_output,
+                             "summary", "ktf_res_summary.rds"))
+
+ktf_summary_auroc <- bind_rows((birewire_sum$auroc_summary %>%
+  filter(str_detect(row_name,"ktf"))),
+  ktf_sum$auroc_summary)
+
+# Generate Auroc Heatmap
+ktf_auroc_heatmap <- ktf_summary_auroc %>%
+  select(statistic, auc, lvls, row_name) %>%
+  unite("name_lvl", row_name, lvls) %>%
+  distinct() %>%
+    pivot_wider(names_from = name_lvl, values_from = auc) %>%
+    column_to_rownames(var = "statistic")  %>%
+    pheatmap(.,
+             cluster_rows = F,
+             treeheight_col = 0,
+             treeheight_row = 0,
+             display_numbers = T,
+             silent = T,
+             cluster_cols=F)
+
+ktf_auroc_heatmap
+```
+
+```{r clearthis2, results='hide', message=FALSE}
+rm(dbd_sum)
+rm(ktf_sum)
+rm(birewire_sum)
+```
+
+
+### 4. Run Knock TF Benchmark Data (KTF) with p-value ranks as TF activity
+```{r ktf_rank}
+# Obtain appropriate runs/rows
+design_ktf_rank <- design_all %>%
+  filter(endsWith(row_name,"ktf"))
+
+# Check design
+design_ktf_rank  %>%
+  rmarkdown::paged_table()
+
+# re-assign to p-value-rank-based TF activity
+design_ktf_rank$bnch_expr <- file.path(bench_input, "KnockTF_rank_expr.rds")
+
+# Run Benchmark
+# ktf_rank_res <- run_benchmark(design_ktf_rank)
+# saveRDS(ktf_rank_res, file.path(bench_output, "ktf_rank_res.rds"))
+
+# Read results
+ktf_rank_res <- readRDS(file.path(bench_output, "ktf_rank_res.rds"))
+
+# Benchmark Results Summary
+ktf_rank_res@summary$auroc_summary %>%
+  rmarkdown::paged_table()
+
+# KNOCK TF Rank-based activity heatmap
+ktf_rank_res@summary$auroc_heat
+```
+\
+
+### 5. Dorothea with Resampled Genes
+Here, DoRothEA regulons were re-sampled with random genes, excluding the genes
+that were originally in the regulons with the purpose to obtain a random gene
+baseline.
+
+```{r resample_form}
+# Filter design for DoRothEA-only runs with both benchmarks
+design_doro <- design_all %>%
+  filter(str_detect(row_name,"dorothea"))
+
+# replace network and rename rows
+design_rand <- design_doro %>%
+  mutate(net_loc = file.path(bench_input, "networks",
+                             "dorothea_random.rds"),
+         row_name = list("dor_random_dbd", "dor_random_dbd", "dor_random_dbd",
+                         "dor_random_ktf", "dor_random_ktf", "dor_random_ktf")) %>%
+  unnest(row_name)
+
+# check if OK
+design_rand %>%
+  rmarkdown::paged_table()
+```
+\
+
+```{r resample_run}
+# # Run Benchmark
+# dor_rand_res <- run_benchmark(design_rand)
+# saveRDS(dor_rand_res, file.path(bench_output, "dor_rand_res.rds"))
+
+# Read Results
+dor_rand_res <- readRDS(file.path(bench_output, "dor_rand_res.rds"))
+
+# Benchmark Summary
+dor_rand_res@summary$auroc_summary %>%
+  rmarkdown::paged_table()
+
+# Random Regulon heatmap
+dor_rand_res@summary$auroc_heat
+
+```
+
+These results suggest that edge reshuffling with BiRewire is the more effective approach. The results also indicate that it might be worth re-doing the gene expression prediction with TF regulons generated with BiRewire as a random baseline.
+\
+\
+
+## III. Further information
+
+### 1. Input Tibble {#input_tibble}
+```{r design, echo = F}
+helpfile <- utils:::.getHelpFile(help(design_all))
+outfile <- tempfile(fileext = ".html")
+tools:::Rd2HTML(helpfile, out=outfile)
+rawHTML <- paste(readLines(outfile), collapse="\n")
+knitr::asis_output(htmltools::htmlPreserve(rawHTML))
+```      
+
+\
+
+### 2. Bench Result Object {#benchResult}
+```{r benchresult, echo = F}
+helpfile <- utils:::.getHelpFile(help(BenchResult))
+outfile <- tempfile(fileext = ".html")
+tools:::Rd2HTML(helpfile, out=outfile)
+rawHTML <- paste(readLines(outfile), collapse="\n")
+knitr::asis_output(htmltools::htmlPreserve(rawHTML))
+```    
