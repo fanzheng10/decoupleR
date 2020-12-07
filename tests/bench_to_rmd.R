@@ -140,7 +140,6 @@ print(dor_rand_res@summary$auroc_summary, n=100)
 dor_rand_res@summary$auroc_heat
 
 
-
 # 4.2. Run with BiRewire Net ----
 # Filter run dorothea only with both benchmarks
 design_doro <- design_all %>%
@@ -162,3 +161,21 @@ design_birewire <- design_doro %>%
 dor_birewire_res <- readRDS(file.path(bench_output, "dor_birewire_res.rds"))
 print(dor_birewire_res@bench_res, n=100)
 dor_birewire_res@summary$auroc_heat
+
+
+# 5. Kinases ----
+k_des <- design_all[1,]
+k_des$row_name = "k_test"
+k_des$net_loc = file.path(bench_input, "kprep", "kinase_network.rds")
+k_des$lvls = "A"
+k_des$gene_source = "Regulator"
+k_des$target = "hgnc_symbol"
+k_des$bnch_expr = file.path(bench_input, "kprep", "kinase_bd.rds")
+k_des$bench_meta =  file.path(bench_input, "kprep", "kinase_meta.rds")
+
+kin_run <- run_benchmark(k_des)
+
+xd <- kin_run@bench_res$activity[[6]]
+xd_dor <- dor_rand_res@bench_res$activity[[6]]
+
+
