@@ -34,16 +34,19 @@ run_benchmark <- function(design,
         .GlobalEnv$meta_data <- readRDS(bench_meta)
       }
 
+
       # filter network (to be changed and extended for additional filters)
       network_filtered <- network %>%
         dplyr::filter((!!.lvls) %in% lvls) %>%
-        distinct_at(vars(-(!!.lvls)), .keep_all = T) %>%
+        distinct_at(vars(-(!!.lvls)), .keep_all = T) %>% # !!!Warn for Duplicates
         rename(.source = ensym(gene_source)) %>% #*
         group_by(.source) %>%
         add_count() %>%
         filter(n >= .minsize) %>%
         ungroup() %>%
         rename(gene_source = .source) #* !!ensym(gene_source) not found
+
+
 
       # Print to track libs
       print(paste(row_name, paste0(unlist(lvls), collapse=""), sep="_"))

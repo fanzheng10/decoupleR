@@ -57,6 +57,7 @@ bench_format <- function(bench_res){
                unique(tib[["statistic"]]))) %>%
     unnest(statistic) %>%
     select(row_name, lvls, statistic, statistic_time, regulon_time, activity) %>%
+    # filter infinite values (! add a warning when this happens)
     mutate(activity = activity %>%
            map(function(tib) tib %>%
                  mutate_at(vars(score), ~replace(., is.infinite(.), 0))

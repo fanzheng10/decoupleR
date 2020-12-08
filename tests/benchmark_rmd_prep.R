@@ -545,9 +545,11 @@ rm(KSets)
 
 # Reform Kinase Bench data
 kinase_bd <- read_csv(file.path(bench_input, "KinaseData", "Kinase_BM_data.csv")) %>%
-  mutate_all(~replace(., is.na(.), 0)) %>%
+  # mutate_all(~replace(., is.na(.), 0)) %>%
   column_to_rownames("X1")
 saveRDS(kinase_bd, file.path(bench_input, "kprep", "kinase_bd.rds"))
+
+
 
 # Reform Kinase Meta data
 kinase_meta <- read.csv(file.path(bench_input, "KinaseData", "KinaseConditionPairs.csv")) %>%
@@ -563,7 +565,6 @@ readRDS(file.path(bench_input,
 
 
 kn <- kinase_network %>%
-  select(Regulator, hgnc_symbol) %>%
-  distinct() %>%
-  mutate(mor = 1, likelihood = 1, confidence = "A")
+  select(Regulator, hgnc_symbol, Evidence) %>%
+  mutate(mor = 1, likelihood = 1)
 saveRDS(kn, file.path(bench_input, "kprep", "kinase_network.rds"))

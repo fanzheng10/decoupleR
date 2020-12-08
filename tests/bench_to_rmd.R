@@ -167,15 +167,48 @@ dor_birewire_res@summary$auroc_heat
 k_des <- design_all[1,]
 k_des$row_name = "k_test"
 k_des$net_loc = file.path(bench_input, "kprep", "kinase_network.rds")
-k_des$lvls = "A"
+k_des$lvls = list(c("Invivo"))
 k_des$gene_source = "Regulator"
 k_des$target = "hgnc_symbol"
 k_des$bnch_expr = file.path(bench_input, "kprep", "kinase_bd.rds")
 k_des$bench_meta =  file.path(bench_input, "kprep", "kinase_meta.rds")
 
-kin_run <- run_benchmark(k_des)
 
-xd <- kin_run@bench_res$activity[[6]]
-xd_dor <- dor_rand_res@bench_res$activity[[6]]
+statistics <- c(
+  # "viper",
+  "mean"
+  # "gsva" #,
+  # "fgsea"
+)
+
+# options
+opts <- list(
+  # viper = list(verbose = FALSE, minsize=0),
+  mean = list()
+  # gsva = list(verbose = FALSE)
+  # fgsea = list(options = list())
+)
 
 
+k_des$statistics <- list(statistics)
+k_des$opts <- list(opts)
+
+# Try run
+kin_run <- run_benchmark(k_des, .minsize = 4, .lvls = "Evidence")
+kin_run@summary$auroc_heat
+kin_run@summary$auroc_summary
+
+
+
+xd <- kin_run@bench_res$activity[[1]]
+xd_prep <- xd %>% prepare_for_roc()
+xd_prep
+xd_auroc <- xd %>% calc_roc_curve()
+xd_auroc
+
+length(unique(xd_auroc))
+
+
+dor <- dor_rand_res@bench_res$activity[[18]]
+dor_prep <- dor %>% prepare_for_roc()
+length(unique(dor$id))
