@@ -28,6 +28,36 @@ check_prereq <- function(vector_loc){
 }
 
 
+#' Helper Function to filter and format the gene set resource
+#'
+#'
+#'
+#'
+#'
+filter_gs <- function(set_source, gene_source, .lvls, lvls, .minsize){
+
+  n_duprows <- sum(duplicated(set_source))
+
+  gs_filtered <- set_source %>%
+    dplyr::filter(.data[[.lvls]] %in% lvls) %>%
+    distinct_at(vars(-.data[[.lvls]]), .keep_all = F) %>%
+    rename(.source = gene_source) %>% #*
+    group_by(.source) %>%
+    add_count() %>%
+    filter(n >= .minsize) %>%
+    ungroup() %>%
+    rename(gene_source = .source) #* !!ensym(gene_source) not found
+
+  if (n_duprows){
+    warning(str_glue("{n_duprows} rows were duplicated in the set resource! ",
+                     "{sum(duplicated(gs_filtered))} duplicated rows ",
+                     "remain after filtering."))
+  }
+  return(gs_filtered)
+}
+
+
+
 # Downstream reformatting ----
 #' Function to format benchmarking results
 #'
@@ -56,12 +86,26 @@ bench_format <- function(bench_res){
              map(function(tib)
                unique(tib[["statistic"]]))) %>%
     unnest(statistic) %>%
-    select(row_name, lvls, statistic, statistic_time, regulon_time, activity) %>%
-    # filter infinite values (! add a warning when this happens)
-    mutate(activity = activity %>%
-           map(function(tib) tib %>%
-                 mutate_at(vars(score), ~replace(., is.infinite(.), 0))
-           ))
+    select(row_name, lvls, statistic, statistic_time, regulon_time, activity)
+
+  # Check and filter infinite values
+  inf_sums <- lapply(res_format$activity,
+                     function(x) sum(is.infinite(x$score))) %>%
+    setNames(paste(res_format$row_name, res_format$statistic, sep="_")) %>%
+    enframe() %>% unnest(value)
+
+  if(sum(inf_sums$value)){
+    res_format <- res_format %>%
+      mutate(activity = activity %>%
+               map(function(tib) tib %>%
+                     mutate_at(vars(score), ~replace(., is.infinite(.), 0))
+               ))
+
+    warning(inf_sums %>%
+              filter(value > 0) %>%
+              str_glue_data("{.$name} had {.$value} infinite values. \n "))
+
+  }
   return(res_format)
 }
 

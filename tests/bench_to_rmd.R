@@ -173,25 +173,43 @@ k_des$target = "hgnc_symbol"
 k_des$bnch_expr = file.path(bench_input, "kprep", "kinase_bd.rds")
 k_des$bench_meta =  file.path(bench_input, "kprep", "kinase_meta.rds")
 
+#
+# col_names <- list(.source = "Regulator",
+#                   .target = "hgnc_symbol",
+#                   .mor = "mor",
+#                   .likelihood = "likelihood")
+#
+# k_des <- k_des %>%
+#   rename(col_names = gene_source) %>%
+#   mutate(target = NULL)
+#
+# k_des$col_names <- list(col_names)
 
-statistics <- c(
-  # "viper",
-  "mean"
-  # "gsva" #,
-  # "fgsea"
-)
+k_des
 
-# options
-opts <- list(
-  # viper = list(verbose = FALSE, minsize=0),
-  mean = list()
-  # gsva = list(verbose = FALSE)
-  # fgsea = list(options = list())
-)
+
+
+# statistics <- c(
+#   # "viper",
+#   "mean"
+#   # "gsva" #,
+#   # "fgsea"
+# )
+#
+# # options
+# opts <- list(
+#   # viper = list(verbose = FALSE, minsize=0),
+#   mean = list()
+#   # gsva = list(verbose = FALSE)
+#   # fgsea = list(options = list())
+# )
 
 
 k_des$statistics <- list(statistics)
 k_des$opts <- list(opts)
+
+k_des
+
 
 # Try run
 kin_run <- run_benchmark(k_des, .minsize = 4, .lvls = "Evidence")

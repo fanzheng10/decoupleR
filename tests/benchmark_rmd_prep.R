@@ -545,7 +545,7 @@ rm(KSets)
 
 # Reform Kinase Bench data
 kinase_bd <- read_csv(file.path(bench_input, "KinaseData", "Kinase_BM_data.csv")) %>%
-  # mutate_all(~replace(., is.na(.), 0)) %>%
+  mutate_all(~replace(., is.na(.), 0)) %>%
   column_to_rownames("X1")
 saveRDS(kinase_bd, file.path(bench_input, "kprep", "kinase_bd.rds"))
 

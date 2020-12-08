@@ -13,8 +13,6 @@ run_benchmark <- function(design,
                           .form = T,
                           .perform = T
                           ){
-  .lvls <- ensym(.lvls)
-
   res <- design %>%
     format_design() %>%
     mutate(activity = pmap(.,
@@ -25,7 +23,7 @@ run_benchmark <- function(design,
 
       # Check conditions and load prerequisites
       if(!.net_bln){
-        .GlobalEnv$network <- readRDS(net_loc)
+        .GlobalEnv$set_source <- readRDS(net_loc)
       }
       if(!.expr_bln){
         .GlobalEnv$gene_expression <- readRDS(bnch_expr) %>% as.matrix()
@@ -34,25 +32,14 @@ run_benchmark <- function(design,
         .GlobalEnv$meta_data <- readRDS(bench_meta)
       }
 
+      # filter resource
+      gs_filtered <- filter_gs(set_source, gene_source, .lvls, lvls, .minsize)
 
-      # filter network (to be changed and extended for additional filters)
-      network_filtered <- network %>%
-        dplyr::filter((!!.lvls) %in% lvls) %>%
-        distinct_at(vars(-(!!.lvls)), .keep_all = T) %>% # !!!Warn for Duplicates
-        rename(.source = ensym(gene_source)) %>% #*
-        group_by(.source) %>%
-        add_count() %>%
-        filter(n >= .minsize) %>%
-        ungroup() %>%
-        rename(gene_source = .source) #* !!ensym(gene_source) not found
-
-
-
-      # Print to track libs
+      # Print Progress
       print(paste(row_name, paste0(unlist(lvls), collapse=""), sep="_"))
 
       # Obtain Activity with decouple and format
-      decouple(mat = gene_expression, network = network_filtered,
+      decouple(mat = gene_expression, network = gs_filtered,
                .source = gene_source, .target = target,
                statistics = statistics,
                .options = opts)  %>%
