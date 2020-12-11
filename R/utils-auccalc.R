@@ -1,6 +1,6 @@
 #' This function calculates precision recall curves
 #'
-#' @param df run_method_viper() output
+#' @param df decouple output (activity element from benchmark result)
 #' @return tidy df containing recall, precision, auc, tp, tn and coverage
 #'
 #' @import PRROC

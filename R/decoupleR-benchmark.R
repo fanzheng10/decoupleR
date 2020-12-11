@@ -61,7 +61,7 @@ run_benchmark <- function(design,
   if(.form & .perform){
     bench_result <-new("BenchResult",
                        bench_res=res,
-                       summary=res %>% bench_sumplot(),
+                       summary=res %>% get_bench_summary(),
                        design=design)
   }
   else{
@@ -70,8 +70,6 @@ run_benchmark <- function(design,
                        summary=list(NULL),
                        design=design)
   }
-
-
 
   return(bench_result)
 }

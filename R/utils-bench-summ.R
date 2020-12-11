@@ -1,0 +1,148 @@
+#' Function that provides summary and plots for the benchmark run
+#'
+#' @param .res_tible formatted bench result tibble with added auroc column
+#' @return AUROC summary with TF coverage, ROC, AUROC, PRROC, Run time,
+#' ROC plots, and Heatmap plots
+#' @import ggplot2
+#' @import pheatmap
+get_bench_summary <- function(.res_tible) {
+
+  # get roc results
+  roc <- apply(.res_tible, 1, function(df) {
+    df$roc %>%
+      mutate(name = df$set_bench,
+             lvls = df$lvls,
+             statistic = df$statistic) %>%
+      unite("name_lvl", name, lvls, remove = F, sep = ".") %>%
+      unite("run_key", name, statistic, lvls, remove = F)
+  }) %>%
+    do.call(rbind, .)
+
+
+  prroc <- apply(.res_tible, 1, function(df) {
+    df$prroc %>%
+      mutate(name = df$set_bench,
+             lvls = df$lvls,
+             statistic = df$statistic) %>%
+      unite("name_lvl", name, lvls, remove = F, sep = ".") %>%
+      unite("run_key", name, statistic, lvls, remove = F)
+  }) %>%
+    do.call(rbind, .)
+
+  print(prroc)
+
+
+  # Plot ROC
+  roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = run_key)) +
+    geom_line() +
+    geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+    xlab("FPR (1-specificity)") +
+    ylab("TPR (sensitivity)")
+
+
+  # Plot PR ROC
+  pr_roc_plot <- ggplot(prroc, aes(x = recall, y = precision , colour = run_key)) +
+    geom_line() +
+    geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
+    xlab("Recall/Sensitivity") +
+    ylab("Precision")
+
+
+  # Extract AUROC
+  auroc <- .res_tible %>%
+    unnest(roc) %>%
+    select(set_bench, lvls, statistic, auc) %>%
+    distinct()
+
+  # Plot AUROC
+  auroc_plot <- auroc %>%
+    unite("run_key", set_bench, statistic, lvls, remove = F) %>%
+    ggplot(., aes(x = reorder(run_key, auc),
+                  y = auc,
+                  fill = run_key)) +
+    geom_bar(stat = "identity") +
+    xlab("networks") +
+    ylab("AUROC") +
+    coord_flip(ylim = c(0.5, 0.8)) +
+    theme(legend.position = "none")
+
+  # AUROC Heatmap
+  auroc_heat <- auroc %>%
+    select(statistic, auc, lvls, set_bench) %>%
+    unite("name_lvl", set_bench, lvls) %>%
+    pivot_wider(names_from = name_lvl, values_from = auc) %>%
+    column_to_rownames(var = "statistic")  %>%
+    pheatmap(.,
+             cluster_rows = F,
+             treeheight_col = 0,
+             treeheight_row = 0,
+             display_numbers = T,
+             silent = T,
+             cluster_cols=F)
+
+
+  # Extract AU PRROC
+  pr_auroc <- .res_tible %>%
+    unnest(prroc) %>%
+    select(set_bench, lvls, statistic, auc) %>%
+    distinct()
+
+  # AU PRROC Heatmap
+  prroc_heat <- pr_auroc %>%
+    select(statistic, auc, lvls, set_bench) %>%
+    unite("name_lvl", set_bench, lvls) %>%
+    pivot_wider(names_from = name_lvl, values_from = auc) %>%
+    column_to_rownames(var = "statistic")  %>%
+    pheatmap(.,
+             cluster_rows = F,
+             treeheight_col = 0,
+             treeheight_row = 0,
+             display_numbers = T,
+             silent = T,
+             cluster_cols=F)
+
+
+  # get computational time info
+  comp_time <- .res_tible %>%
+    # get statistic time from activity
+    mutate(statistic_time = activity %>%
+             map(function(tib)
+               tib %>%
+                 select(statistic_time) %>%
+                 unique)) %>%
+    unnest(statistic_time) %>%
+    # calculate regulon size
+    group_by(set_bench, lvls) %>%
+    mutate(regulon_time = sum(statistic_time)) %>%
+    select(set_bench, lvls, statistic_time, regulon_time)
+
+
+  # Join AUROC, PRROC, Coverage, and Comp time
+  auroc_summary <- auroc %>%
+    inner_join(pr_auroc %>%
+                 select(set_bench, auc, statistic) %>%
+                 rename(pr_auc = auc),
+               by = c("set_bench", "statistic")) %>%
+    inner_join(x=.,
+               y=(roc %>%
+                    group_by(name_lvl) %>%
+                    summarise(source_coverage = coverage) %>%
+                    distinct() %>%
+                    ungroup() %>%
+                    separate(col="name_lvl",
+                             into=c("set_bench", "lvls"),
+                             sep="\\.")),
+               by = c("set_bench", "lvls")) %>%
+    inner_join(x=.,
+               y=comp_time,
+               by = c("set_bench", "lvls")) %>%
+    distinct()
+
+  bench_summary <- list(auroc_summary, roc_plot, pr_roc_plot,
+                        auroc_plot, auroc_heat, prroc_heat)
+
+  names(bench_summary) <- c("auroc_summary", "roc_plot", "pr_roc_plot",
+                            "auroc_plot", "auroc_heat", "prroc_heat")
+
+  return(bench_summary)
+}
