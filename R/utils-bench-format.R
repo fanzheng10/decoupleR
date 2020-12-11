@@ -62,20 +62,6 @@ bench_sumplot <- function(.res_tible) {
   }) %>%
     do.call(rbind, .)
 
-  # get computational time info
-  comp_time <- .res_tible %>%
-    # get statistic time from activity
-    mutate(statistic_time = activity %>%
-             map(function(tib)
-               tib %>%
-                 select(statistic_time) %>%
-                 unique)) %>%
-    unnest(statistic_time) %>%
-    # calculate regulon size
-    group_by(set_bench, lvls) %>%
-    mutate(regulon_time = sum(statistic_time)) %>%
-    select(set_bench, lvls, statistic_time, regulon_time)
-
   # Plot ROC
   roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = run_key)) +
     geom_line() +
@@ -117,6 +103,21 @@ bench_sumplot <- function(.res_tible) {
              cluster_cols=F)
 
 
+  # get computational time info
+  comp_time <- .res_tible %>%
+    # get statistic time from activity
+    mutate(statistic_time = activity %>%
+             map(function(tib)
+               tib %>%
+                 select(statistic_time) %>%
+                 unique)) %>%
+    unnest(statistic_time) %>%
+    # calculate regulon size
+    group_by(set_bench, lvls) %>%
+    mutate(regulon_time = sum(statistic_time)) %>%
+    select(set_bench, lvls, statistic_time, regulon_time)
+
+
   # Join Coverage and Run time
   auroc_summary <- auroc %>%
     inner_join(x=.,
@@ -136,6 +137,7 @@ bench_sumplot <- function(.res_tible) {
 
   bench_summary <- list(auroc_summary, roc_plot,
                         auroc_plot, auroc_heat)
+
   names(bench_summary) <- c("auroc_summary", "roc_plot",
                             "auroc_plot", "auroc_heat")
 

@@ -58,11 +58,20 @@ run_benchmark <- function(design,
       else .
     }
 
+  if(.form & .perform){
     bench_result <-new("BenchResult",
                        bench_res=res,
-                       summary=ifelse(.form & .perform,
-                                       res %>% bench_sumplot(),
-                                       list(NULL)),
+                       summary=res %>% bench_sumplot(),
                        design=design)
+  }
+  else{
+    bench_result <-new("BenchResult",
+                       bench_res=res,
+                       summary=list(NULL),
+                       design=design)
+  }
+
+
+
   return(bench_result)
 }
