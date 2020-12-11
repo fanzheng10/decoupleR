@@ -44,6 +44,7 @@ calc_pr_curve = function(df) {
 #' @return tidy data frame with tpr, fpr, auc, n, tp, tn and coverage
 #'
 #' @import yardstick
+#' @import magrittr
 calc_roc_curve = function(df, downsampling = F, times = 1000, ranked = F) {
 
   if (ranked == T) {
