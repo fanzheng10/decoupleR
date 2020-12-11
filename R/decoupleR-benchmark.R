@@ -32,13 +32,14 @@ run_benchmark <- function(design,
         .GlobalEnv$meta_data <- readRDS(bench_meta)
       }
 
-      # filter resource
+      # Filter set_source/network
       .GlobalEnv$ss_filtered <- filter_sets(set_source, gene_source,
                                             .lvls, lvls, .minsize)
 
-      # Print Progress (replae as message and add verbose option)
+      # Print Current Row/Run
       .curr_row <- paste(set_name, bench_name,
-                         paste0(unlist(lvls), collapse=""), sep="_")
+                         paste0(unlist(lvls), collapse=""),
+                         sep="_")
       message(str_glue("Currently Running: {.curr_row}"))
 
       # Obtain Activity with decouple and format
@@ -52,22 +53,16 @@ run_benchmark <- function(design,
     })) %>% {
       if(.form & !.perform) bench_format(.)
       else if(.form & .perform) bench_format(.) %>%
-        mutate(roc = activity %>% map(calc_roc_curve))
+        mutate(roc = activity %>% map(calc_roc_curve),
+               prroc = activity %>% map(calc_pr_curve))
       else .
     }
 
-  # handle return
-  if(.form & .perform){
     bench_result <-new("BenchResult",
                        bench_res=res,
-                       summary=res %>% bench_sumplot(),
+                       summary=ifelse(.form & .perform,
+                                       res %>% bench_sumplot(),
+                                       list(NULL)),
                        design=design)
-  }
-  else{
-    bench_result <-new("BenchResult",
-                       bench_res=res,
-                       summary=list(NULL),
-                       design=design)
-  }
   return(bench_result)
 }

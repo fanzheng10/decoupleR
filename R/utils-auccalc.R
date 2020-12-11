@@ -2,10 +2,16 @@
 #'
 #' @param df run_method_viper() output
 #' @return tidy df containing recall, precision, auc, tp, tn and coverage
+#'
+#' @import PRROC
+#' @import magrittr
 calc_pr_curve = function(df) {
   df = df %>% prepare_for_roc(., filter_tn = T)
 
   feature_coverage = length(unique(df$tf))
+
+  # convert to numeric
+  df$response %<>% (function(x){as.numeric(levels(x))[x]})
 
   tn = df %>% filter(response == 0)
   tp = df %>% filter(response == 1)
@@ -39,8 +45,6 @@ calc_pr_curve = function(df) {
 #'
 #' @import yardstick
 calc_roc_curve = function(df, downsampling = F, times = 1000, ranked = F) {
-
-  library(yardstick)
 
   if (ranked == T) {
     df = df %>% prepare_for_roc(., filter_tn = T, ranked = T)

@@ -1,64 +1,3 @@
-# Helper functions for run_benchmark ----
-#' Helper Function to to generate the booleans used to check if the current
-#' locations/data objects are the same as the previous one
-#' @param design location of a json file with run design specifications
-#' @return a design tibble to be used in benchmarking
-#' @export
-format_design <- function(design){
-  design %>%
-    mutate(.net_bln = net_loc %>% check_prereq(),
-           .expr_bln = bnch_expr %>% check_prereq(),
-           .meta_bln = bench_meta %>% check_prereq())
-}
-
-
-#' Helper Function that checks if the  preceding vector element is the same
-#' as the current element
-#'
-#' @param vector_loc char vector with directories
-#' @return logical values describing whether the location of the loaded files
-#' has changes
-#' @export
-check_prereq <- function(vector_loc){
-  tib_loc <- tibble(current=vector_loc, behind=lag(vector_loc))
-
-  pmap_lgl(tib_loc, function(behind, current){
-    ifelse(is.na(behind) || behind!=current, FALSE, TRUE)
-  })
-}
-
-
-#' Helper Function to filter and format the gene set resource
-#'
-#'
-#'
-#'
-#'
-filter_sets <- function(set_source, gene_source, .lvls, lvls, .minsize){
-
-  n_duprows <- sum(duplicated(set_source))
-
-  gs_filtered <- set_source %>%
-    dplyr::filter(.data[[.lvls]] %in% lvls) %>%
-    distinct_at(vars(-.data[[.lvls]]), .keep_all = F) %>%
-    rename(.source = gene_source) %>% #*
-    group_by(.source) %>%
-    add_count() %>%
-    filter(n >= .minsize) %>%
-    ungroup() %>%
-    rename(gene_source = .source) #* !!ensym(gene_source) not found
-
-  if (n_duprows){
-    warning(str_glue("{n_duprows} rows were duplicated in the set resource! ",
-                     "{sum(duplicated(gs_filtered))} duplicated rows ",
-                     "remain after filtering."))
-  }
-  return(gs_filtered)
-}
-
-
-
-# Downstream reformatting ----
 #' Function to format benchmarking results
 #'
 #' @param bench_res benchmarking results
@@ -94,7 +33,8 @@ bench_format <- function(bench_res){
 
     warning(inf_sums %>%
               filter(value > 0) %>%
-              str_glue_data("{.$name} had {.$value} infinite values. \n "))
+              str_glue_data("{.$value} infinite values were filtered",
+                            " in {.$name}. \n "))
 
   }
   return(res_format)
@@ -104,12 +44,12 @@ bench_format <- function(bench_res){
 
 #' Function that provides summary and plots for the benchmark run
 #'
-#' @param .res_tible formatted bench result tible with added roc column
-#' @param title character string for title of plots
-#' @return AUROC summary per row with TF coverage, ROC AUROC, Heatmap plots
+#' @param .res_tible formatted bench result tibble with added auroc column
+#' @return AUROC summary with TF coverage, ROC, AUROC, PRROC, Run time,
+#' ROC plots, and Heatmap plots
 #' @import ggplot2
 #' @import pheatmap
-bench_sumplot <- function(.res_tible, title = "") {
+bench_sumplot <- function(.res_tible) {
 
   # get roc results
   roc <- apply(.res_tible, 1, function(df) {
@@ -126,10 +66,10 @@ bench_sumplot <- function(.res_tible, title = "") {
   comp_time <- .res_tible %>%
     # get statistic time from activity
     mutate(statistic_time = activity %>%
-           map(function(tib)
-             tib %>%
-               select(statistic_time) %>%
-               unique)) %>%
+             map(function(tib)
+               tib %>%
+                 select(statistic_time) %>%
+                 unique)) %>%
     unnest(statistic_time) %>%
     # calculate regulon size
     group_by(set_bench, lvls) %>%
@@ -139,7 +79,6 @@ bench_sumplot <- function(.res_tible, title = "") {
   # Plot ROC
   roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = run_key)) +
     geom_line() +
-    ggtitle(paste("ROC curve:", title)) +
     geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
     xlab("FPR (1-specificity)") +
     ylab("TPR (sensitivity)")
@@ -157,7 +96,6 @@ bench_sumplot <- function(.res_tible, title = "") {
                   y = auc,
                   fill = run_key)) +
     geom_bar(stat = "identity") +
-    ggtitle(paste("AUROC:", title)) +
     xlab("networks") +
     ylab("AUROC") +
     coord_flip(ylim = c(0.5, 0.8)) +
@@ -179,18 +117,18 @@ bench_sumplot <- function(.res_tible, title = "") {
              cluster_cols=F)
 
 
-  # Join coverage
+  # Join Coverage and Run time
   auroc_summary <- auroc %>%
-  inner_join(x=.,
-             y=(roc %>%
-                  group_by(name_lvl) %>%
-                  summarise(exp_coverage = coverage) %>%
-                  distinct() %>%
-                  ungroup() %>%
-                  separate(col="name_lvl",
-                           into=c("set_bench", "lvls"),
-                           sep="\\.")),
-             by = c("set_bench", "lvls")) %>%
+    inner_join(x=.,
+               y=(roc %>%
+                    group_by(name_lvl) %>%
+                    summarise(source_coverage = coverage) %>%
+                    distinct() %>%
+                    ungroup() %>%
+                    separate(col="name_lvl",
+                             into=c("set_bench", "lvls"),
+                             sep="\\.")),
+               by = c("set_bench", "lvls")) %>%
     inner_join(x=.,
                y=comp_time,
                by = c("set_bench", "lvls")) %>%

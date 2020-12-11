@@ -45,7 +45,9 @@ Suggests:
     roxygen2,
     testthat,
     pheatmap,
-    ggplot2
+    ggplot2,
+    PRROC,
+    yardstick
 VignetteBuilder: 
     knitr
 biocViews:
