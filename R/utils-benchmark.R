@@ -34,7 +34,7 @@ check_prereq <- function(vector_loc){
 #'
 #'
 #'
-filter_gs <- function(set_source, gene_source, .lvls, lvls, .minsize){
+filter_sets <- function(set_source, gene_source, .lvls, lvls, .minsize){
 
   n_duprows <- sum(duplicated(set_source))
 
@@ -66,32 +66,23 @@ filter_gs <- function(set_source, gene_source, .lvls, lvls, .minsize){
 #' @export
 bench_format <- function(bench_res){
   res_format <- bench_res %>%
+    unite("set_bench", set_name, bench_name) %>%
     unnest(activity) %>%
-    # get statistic time from activity
-    mutate(statistic_time = activity %>%
-             map(function(tib)
-               tib %>%
-                 select(statistic_time) %>%
-                 unique)) %>%
-    unnest(statistic_time) %>%
-    # calculate regulon size
-    group_by(row_name, lvls) %>%
-    mutate(regulon_time = sum(statistic_time)) %>%
     # convert lvls from character to string
     rowwise() %>%
     mutate(lvls = paste0(unlist(lvls), collapse = "")) %>%
     ungroup() %>%
-    # get statistic row_name
+    # get statistic name
     mutate(statistic = activity %>%
              map(function(tib)
                unique(tib[["statistic"]]))) %>%
     unnest(statistic) %>%
-    select(row_name, lvls, statistic, statistic_time, regulon_time, activity)
+    select(set_bench, lvls, statistic, activity)
 
   # Check and filter infinite values
   inf_sums <- lapply(res_format$activity,
                      function(x) sum(is.infinite(x$score))) %>%
-    setNames(paste(res_format$row_name, res_format$statistic, sep="_")) %>%
+    setNames(paste(res_format$set_bench, res_format$statistic, sep="_")) %>%
     enframe() %>% unnest(value)
 
   if(sum(inf_sums$value)){
@@ -120,18 +111,30 @@ bench_format <- function(bench_res){
 #' @import pheatmap
 bench_sumplot <- function(.res_tible, title = "") {
 
-  .res_tible <- .res_tible %>%
-    select(row_name, lvls, statistic, roc)
-
+  # get roc results
   roc <- apply(.res_tible, 1, function(df) {
     df$roc %>%
-      mutate(name = df$row_name,
+      mutate(name = df$set_bench,
              lvls = df$lvls,
              statistic = df$statistic) %>%
       unite("name_lvl", name, lvls, remove = F, sep = ".") %>%
       unite("run_key", name, statistic, lvls, remove = F)
   }) %>%
     do.call(rbind, .)
+
+  # get computational time info
+  comp_time <- .res_tible %>%
+    # get statistic time from activity
+    mutate(statistic_time = activity %>%
+           map(function(tib)
+             tib %>%
+               select(statistic_time) %>%
+               unique)) %>%
+    unnest(statistic_time) %>%
+    # calculate regulon size
+    group_by(set_bench, lvls) %>%
+    mutate(regulon_time = sum(statistic_time)) %>%
+    select(set_bench, lvls, statistic_time, regulon_time)
 
   # Plot ROC
   roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = run_key)) +
@@ -144,12 +147,12 @@ bench_sumplot <- function(.res_tible, title = "") {
   # Extract AUROC
   auroc <- .res_tible %>%
     unnest(roc) %>%
-    select(row_name, lvls, statistic, auc) %>%
+    select(set_bench, lvls, statistic, auc) %>%
     distinct()
 
   # Plot AUROC
   auroc_plot <- auroc %>%
-    unite("run_key", row_name, statistic, lvls, remove = F) %>%
+    unite("run_key", set_bench, statistic, lvls, remove = F) %>%
     ggplot(., aes(x = reorder(run_key, auc),
                   y = auc,
                   fill = run_key)) +
@@ -163,8 +166,8 @@ bench_sumplot <- function(.res_tible, title = "") {
 
   # Plot AUROC heat
   auroc_heat <- auroc %>%
-    select(statistic, auc, lvls, row_name) %>%
-    unite("name_lvl", row_name, lvls) %>%
+    select(statistic, auc, lvls, set_bench) %>%
+    unite("name_lvl", set_bench, lvls) %>%
     pivot_wider(names_from = name_lvl, values_from = auc) %>%
     column_to_rownames(var = "statistic")  %>%
     pheatmap(.,
@@ -176,20 +179,27 @@ bench_sumplot <- function(.res_tible, title = "") {
              cluster_cols=F)
 
 
-  # join coverage
+  # Join coverage
   auroc_summary <- auroc %>%
   inner_join(x=.,
              y=(roc %>%
                   group_by(name_lvl) %>%
-                  summarise(cov = coverage) %>%
+                  summarise(exp_coverage = coverage) %>%
                   distinct() %>%
                   ungroup() %>%
                   separate(col="name_lvl",
-                           into=c("row_name", "lvls"),
-                           sep="\\.")))
+                           into=c("set_bench", "lvls"),
+                           sep="\\.")),
+             by = c("set_bench", "lvls")) %>%
+    inner_join(x=.,
+               y=comp_time,
+               by = c("set_bench", "lvls")) %>%
+    distinct()
 
-  bench_summary <- list(auroc_summary, roc_plot, auroc_plot, auroc_heat)
-  names(bench_summary) <- c("auroc_summary", "roc_plot", "auroc_plot", "auroc_heat")
+  bench_summary <- list(auroc_summary, roc_plot,
+                        auroc_plot, auroc_heat)
+  names(bench_summary) <- c("auroc_summary", "roc_plot",
+                            "auroc_plot", "auroc_heat")
 
   return(bench_summary)
 }

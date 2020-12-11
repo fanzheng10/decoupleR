@@ -165,7 +165,7 @@ dor_birewire_res@summary$auroc_heat
 
 # 5. Kinases ----
 k_des <- design_all[1,]
-k_des$row_name = "k_test"
+k_des$row_name = "kset_test"
 k_des$net_loc = file.path(bench_input, "kprep", "kinase_network.rds")
 k_des$lvls = list(c("Invivo"))
 k_des$gene_source = "Regulator"
@@ -173,60 +173,68 @@ k_des$target = "hgnc_symbol"
 k_des$bnch_expr = file.path(bench_input, "kprep", "kinase_bd.rds")
 k_des$bench_meta =  file.path(bench_input, "kprep", "kinase_meta.rds")
 
+
 #
 # col_names <- list(.source = "Regulator",
 #                   .target = "hgnc_symbol",
 #                   .mor = "mor",
 #                   .likelihood = "likelihood")
-#
+
 # k_des <- k_des %>%
 #   rename(col_names = gene_source) %>%
 #   mutate(target = NULL)
 #
 # k_des$col_names <- list(col_names)
+# k_des
 
-k_des
+statistics <- c(
+  # "viper",
+  "mean"
+  # "gsva" #,
+  # "fgsea"
+)
 
-
-
-# statistics <- c(
-#   # "viper",
-#   "mean"
-#   # "gsva" #,
-#   # "fgsea"
-# )
-#
-# # options
-# opts <- list(
-#   # viper = list(verbose = FALSE, minsize=0),
-#   mean = list()
-#   # gsva = list(verbose = FALSE)
-#   # fgsea = list(options = list())
-# )
-
+# options
+opts <- list(
+  # viper = list(verbose = FALSE, minsize=0),
+  mean = list()
+  # gsva = list(verbose = FALSE)
+  # fgsea = list(options = list())
+)
 
 k_des$statistics <- list(statistics)
 k_des$opts <- list(opts)
 
-k_des
+# split row_name to something meaningful
+k_des <- k_des %>%
+separate(row_name, c("set_name", "bench_name"))
+
+
+names(k_des)
+
+# order columns
+# k_des %>%
+#   select(set_source, benchmark)
 
 
 # Try run
 kin_run <- run_benchmark(k_des, .minsize = 4, .lvls = "Evidence")
 kin_run@summary$auroc_heat
 kin_run@summary$auroc_summary
+kin_run@bench_res
 
 
 
-xd <- kin_run@bench_res$activity[[1]]
-xd_prep <- xd %>% prepare_for_roc()
-xd_prep
-xd_auroc <- xd %>% calc_roc_curve()
-xd_auroc
-
-length(unique(xd_auroc))
-
-
-dor <- dor_rand_res@bench_res$activity[[18]]
-dor_prep <- dor %>% prepare_for_roc()
-length(unique(dor$id))
+#
+# xd <- kin_run@bench_res$activity[[1]]
+# xd_prep <- xd %>% prepare_for_roc()
+# xd_prep
+# xd_auroc <- xd %>% calc_roc_curve()
+# xd_auroc
+#
+# length(unique(xd_auroc))
+#
+#
+# dor <- dor_rand_res@bench_res$activity[[18]]
+# dor_prep <- dor %>% prepare_for_roc()
+# length(unique(dor$id))

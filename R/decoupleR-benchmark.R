@@ -16,7 +16,7 @@ run_benchmark <- function(design,
   res <- design %>%
     format_design() %>%
     mutate(activity = pmap(.,
-                           .f=function(row_name, net_loc, lvls,
+                           .f=function(set_name, bench_name, net_loc, lvls,
                                        gene_source, target, statistics,
                                        bnch_expr, bench_meta,
                                        .net_bln, .expr_bln, .meta_bln, opts){
@@ -33,13 +33,16 @@ run_benchmark <- function(design,
       }
 
       # filter resource
-      gs_filtered <- filter_gs(set_source, gene_source, .lvls, lvls, .minsize)
+      .GlobalEnv$ss_filtered <- filter_sets(set_source, gene_source,
+                                            .lvls, lvls, .minsize)
 
-      # Print Progress
-      print(paste(row_name, paste0(unlist(lvls), collapse=""), sep="_"))
+      # Print Progress (replae as message and add verbose option)
+      .curr_row <- paste(set_name, bench_name,
+                         paste0(unlist(lvls), collapse=""), sep="_")
+      message(str_glue("Currently Running: {.curr_row}"))
 
       # Obtain Activity with decouple and format
-      decouple(mat = gene_expression, network = gs_filtered,
+      decouple(mat = gene_expression, network = ss_filtered,
                .source = gene_source, .target = target,
                statistics = statistics,
                .options = opts)  %>%
