@@ -1,25 +1,26 @@
 # Helper functions for run_benchmark ----
+
 #' Helper Function to to generate the booleans used to check if the current
 #' locations/data objects are the same as the previous one
-#' @param design location of a json file with run design specifications
+#' @param .design location of a json file with run design specifications
 #' @return a design tibble to be used in benchmarking
 #' @export
-format_design <- function(design){
-  design %>%
-    mutate(.source_bln = source_loc %>% check_prereq(),
-           .expr_bln = bexpr_loc %>% check_prereq(),
-           .meta_bln = bmeta_loc %>% check_prereq())
+format_design <- function(.design){
+  .design %>%
+    mutate(.source_bln = source_loc %>% check_preced(),
+           .expr_bln = bexpr_loc %>% check_preced(),
+           .meta_bln = bmeta_loc %>% check_preced())
 }
 
 
-#' Helper Function that checks if the  preceding vector element is the same
+#' Helper Function that checks if the preceding vector element is the same
 #' as the current element
 #'
 #' @param vector_loc char vector with directories
 #' @return logical values describing whether the location of the loaded files
 #' has changes
 #' @export
-check_prereq <- function(vector_loc){
+check_preced <- function(vector_loc){
   tib_loc <- tibble(current=vector_loc, behind=lag(vector_loc))
 
   pmap_lgl(tib_loc, function(behind, current){
@@ -28,25 +29,58 @@ check_prereq <- function(vector_loc){
 }
 
 
+
+#' Helper Function that checks if the source_set/network set is appropriately
+#' formatted
+#'
+#' @param source_loc location of the source_set
+check_prereq <- function(source_loc, target_col, source_col, filter_col){
+  expected_cols <- c(target_col, source_col, filter_col,
+                     "mor", "likelihood")
+
+  set_source <- readRDS(source_loc)
+
+  missing_cols <- setdiff(expected_cols, names(set_source))
+
+
+  # inform for inconsistencies with expected
+  if(length(missing_cols)){
+    if(!("mor" %in% missing_cols) | !("likelihood" %in% missing_cols)){
+      stop(str_glue("Columns 'mor' or 'likelihood' are missing!
+                    Please assign arbitrary 'mor' and 'likelihood' columns ",
+                    "populated with 1 (as integer) in the network/source set"))
+    } else{
+      stop(missing_cols %>%
+             str_glue_data("{} Not Found! Please make sure that appropriate",
+                           " column names were provided in the design tibble"))
+    }
+  }
+
+  return(set_source)
+}
+
+
 #' Helper Function to filter and format the gene set resource
 #'
-#'
-#'
-#'
-#'
-filter_sets <- function(set_source, source_col, .lvls, lvls, .minsize, silent){
-
+#' @param set_source
+#' @param source_col
+#' @param filter_col
+#' @param filter_crit
+#' @param .minsize
+#' @param silent
+#' @return returns a
+filter_sets <- function(set_source, source_col,
+                        filter_col, filter_crit,
+                        .minsize, silent){
   n_duprows <- sum(duplicated(set_source))
 
   gs_filtered <- set_source %>%
-    dplyr::filter(.data[[.lvls]] %in% lvls) %>%
-    distinct_at(vars(-.data[[.lvls]]), .keep_all = F) %>%
-    rename(.source = source_col) %>% #*
-    group_by(.source) %>%
+    dplyr::filter(.data[[filter_col]] %in% filter_crit) %>%
+    distinct_at(vars(-.data[[filter_col]]), .keep_all = F) %>%
+    group_by(.data[[source_col]]) %>%
     add_count() %>%
     filter(n >= .minsize) %>%
-    ungroup() %>%
-    rename(source_col = .source) #* !!ensym(source_col) not found
+    ungroup()
 
   if (n_duprows & !silent){
     warning(str_glue("{n_duprows} rows were duplicated in the set resource! ",

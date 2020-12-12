@@ -8,7 +8,6 @@
 get_bench_summary <- function(.res_tibble) {
   # get roc results
   roc <- format_roc(.res_tibble, "roc")
-  print(roc)
 
   # get PR roc results
   pr_roc <- format_roc(.res_tibble, "prroc")
@@ -30,12 +29,12 @@ get_bench_summary <- function(.res_tibble) {
   # Extract AUROC
   auroc_tibble <- .res_tibble %>%
     unnest(roc) %>%
-    select(set_bench, filter_criteria, statistic, auc) %>%
+    select(set_bench, filter_crit, statistic, auc) %>%
     distinct()
 
   # Plot AUROC
   auroc_plot <- auroc_tibble %>%
-    unite("run_key", set_bench, statistic, filter_criteria, remove = F) %>%
+    unite("run_key", set_bench, statistic, filter_crit, remove = F) %>%
     ggplot(., aes(x = reorder(run_key, auc),
                   y = auc,
                   fill = run_key)) +
@@ -51,7 +50,7 @@ get_bench_summary <- function(.res_tibble) {
   # Extract AU PRROC
   pr_auroc_tibble <- .res_tibble %>%
     unnest(prroc) %>%
-    select(set_bench, filter_criteria, statistic, auc) %>%
+    select(set_bench, filter_crit, statistic, auc) %>%
     distinct()
 
   # AU PRROC Heatmap
@@ -67,9 +66,9 @@ get_bench_summary <- function(.res_tibble) {
                  unique)) %>%
     unnest(statistic_time) %>%
     # calculate regulon size
-    group_by(set_bench, filter_criteria) %>%
+    group_by(set_bench, filter_crit) %>%
     mutate(regulon_time = sum(statistic_time)) %>%
-    select(set_bench, filter_criteria, statistic_time, regulon_time)
+    select(set_bench, filter_crit, statistic_time, regulon_time)
 
 
   # Join AUROC, PRROC, Coverage, and Comp time
@@ -85,12 +84,12 @@ get_bench_summary <- function(.res_tibble) {
                     distinct() %>%
                     ungroup() %>%
                     separate(col="name_lvl",
-                             into=c("set_bench", "filter_criteria"),
+                             into=c("set_bench", "filter_crit"),
                              sep="\\.")),
-               by = c("set_bench", "filter_criteria")) %>%
+               by = c("set_bench", "filter_crit")) %>%
     inner_join(x=.,
                y=comp_time,
-               by = c("set_bench", "filter_criteria")) %>%
+               by = c("set_bench", "filter_crit")) %>%
     distinct()
 
   bench_summary <- list(auroc_summary, roc_plot, pr_roc_plot,
@@ -115,10 +114,10 @@ format_roc <- function(.res_tibble, roc_column){
       as_tibble() %>%
       unnest(value) %>%
       mutate(name = df$set_bench,
-             filter_criteria = df$filter_criteria,
+             filter_crit = df$filter_crit,
              statistic = df$statistic) %>%
-      unite("name_lvl", name, filter_criteria, remove = F, sep = ".") %>%
-      unite("run_key", name, statistic, filter_criteria, remove = F)
+      unite("name_lvl", name, filter_crit, remove = F, sep = ".") %>%
+      unite("run_key", name, statistic, filter_crit, remove = F)
   }) %>%
     do.call(rbind, .)
 }
@@ -130,8 +129,8 @@ format_roc <- function(.res_tibble, roc_column){
 #' @import ggplot2
 get_auroc_heat <- function(auroc_tibble){
   auroc_tibble %>%
-    select(statistic, auc, filter_criteria, set_bench) %>%
-    unite("name_lvl", set_bench, filter_criteria) %>%
+    select(statistic, auc, filter_crit, set_bench) %>%
+    unite("name_lvl", set_bench, filter_crit) %>%
     pivot_wider(names_from = name_lvl, values_from = auc) %>%
     column_to_rownames(var = "statistic")  %>%
     pheatmap(.,

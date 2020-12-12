@@ -1,34 +1,77 @@
-#' This function calculates precision recall curves
+#' This function calculates precision recall curve
 #'
-#' @param df decouple output (activity element from benchmark result)
-#' @return tidy df containing recall, precision, auc, tp, tn and coverage
+#' @param df run_benchmark roc column provided as input
+#' @param downsampling logical flag indicating if the number of TN should be
+#'   downsampled to the number of TP
+#' @param times integer showing the number of downsampling
+#' @param ranked logical flag indicating if input is derived from composite
+#'   ranking that already took up-/downregulation (sign) into account
 #'
-#' @import PRROC
+#' @return tidy data frame with tpr, fpr, auc, n, tp, tn and coverage
+#'
+#' @import yardstick
 #' @import magrittr
-calc_pr_curve = function(df) {
-  df = df %>% prepare_for_roc(., filter_tn = T)
+calc_pr_curve = function(df, downsampling = F, times = 1000, ranked = F) {
 
-  feature_coverage = length(unique(df$tf))
+  if (ranked == T) {
+    df = df %>% prepare_for_roc(., filter_tn = T, ranked = T)
+  } else {
+    df = df %>%
+      prepare_for_roc(., filter_tn = T, ranked = F)
+  }
 
-  # convert to numeric
-  df$response %<>% (function(x){as.numeric(levels(x))[x]})
+  if (length(which(df$response == 0)) == nrow(df)){
+    return(as_tibble(NULL))
+  }
 
   tn = df %>% filter(response == 0)
   tp = df %>% filter(response == 1)
 
-  r = pr.curve(scores.class0 = df$predictor,
-               weights.class0 = df$response,
-               curve=T)
-  res = r$curve %>%
-    as_tibble() %>%
-    setNames(., c("recall", "precision", "th")) %>%
-    mutate(auc = r$auc.davis.goadrich,
-           type = r$type,
-           n = sum(df$response),
-           tp = nrow(tp),
-           tn = nrow(tn),
-           coverage = feature_coverage) %>%
-    arrange(recall, desc(precision))
+  feature_coverage = length(unique(df$tf))
+
+  if (downsampling == T) {
+    # number of true positives
+    num_tp = nrow(tp)
+
+    res = map_df(seq(from=1, to=times, by=1), function(i) {
+      df_sub = sample_n(tn, num_tp, replace=TRUE) %>%
+        bind_rows(tp)
+
+      r_sub = df_sub %>%
+        pr_curve(response, predictor)
+      auc = df_sub %>%
+        pr_auc(response, predictor) %>%
+        select(.estimate)
+
+      res_sub = tibble(tpr = r_sub$precision,
+                       fpr = 1-r_sub$recall,
+                       th = r_sub$thresholds,
+                       auc = r_sub$auc,
+                       n = length(which(df$response == 1)),
+                       tp = nrow(tp),
+                       tn = nrow(tn),
+                       coverage = feature_coverage) %>%
+        mutate_("run" = i)
+
+    })
+  } else {
+    r = df %>%
+      pr_curve(response, predictor)
+    auc = df %>%
+      pr_auc(response, predictor)
+
+    res = tibble(precision = r$precision,
+                 recall = r$recall,
+                 th = r$.threshold,
+                 auc = auc$.estimate,
+                 n = length(which(df$response == 1)),
+                 tp = nrow(tp),
+                 tn = nrow(tn),
+                 coverage = feature_coverage) %>%
+      arrange(precision, precision)
+
+  }
+  return(res)
 }
 
 

@@ -4,21 +4,12 @@
 \alias{run_benchmark}
 \title{Benchmark gene sets with decouple}
 \usage{
-run_benchmark(
-  design,
-  .minsize = 10,
-  .lvls = "confidence",
-  .form = T,
-  .perform = T
-)
+run_benchmark(.design, .minsize = 10, .form = T, .perform = T, .silent = T)
 }
 \arguments{
-\item{design}{location of a json file with run design specifications}
+\item{.design}{location of a json file with run design specifications}
 
 \item{.minsize}{regulon/gene set minimum number of targets/members}
-
-\item{.lvls}{column name in gene set/network resource that you wish to filter
-to, in relation to the lvls in design}
 
 \item{.form}{bool whether to format or not}
 

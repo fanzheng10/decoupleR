@@ -46,7 +46,6 @@ Suggests:
     testthat,
     pheatmap,
     ggplot2,
-    PRROC,
     yardstick
 VignetteBuilder: 
     knitr

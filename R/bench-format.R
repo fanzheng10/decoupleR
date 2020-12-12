@@ -9,14 +9,14 @@ bench_format <- function(bench_res, silent){
     unnest(activity) %>%
     # convert filter_criteria from character to string
     rowwise() %>%
-    mutate(filter_criteria = paste0(unlist(filter_criteria), collapse = "")) %>%
+    mutate(filter_crit = paste0(unlist(filter_crit), collapse = "")) %>%
     ungroup() %>%
     # get statistic name
     mutate(statistic = activity %>%
              map(function(tib)
                unique(tib[["statistic"]]))) %>%
     unnest(statistic) %>%
-    select(set_bench, filter_criteria, statistic, activity)
+    select(set_bench, filter_crit, statistic, activity)
 
   # Check and filter infinite values
   inf_sums <- lapply(res_format$activity,
