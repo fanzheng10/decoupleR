@@ -3,7 +3,7 @@
 #' @param bench_res benchmarking results
 #' @returns formatted benchmarking results
 #' @export
-bench_format <- function(bench_res){
+bench_format <- function(bench_res, silent){
   res_format <- bench_res %>%
     unite("set_bench", set_name, bench_name) %>%
     unnest(activity) %>%
@@ -31,7 +31,8 @@ bench_format <- function(bench_res){
                      mutate_at(vars(score), ~replace(., is.infinite(.), 0))
                ))
 
-    warning(inf_sums %>%
+    if(!silent)
+      warning(inf_sums %>%
               filter(value > 0) %>%
               str_glue_data("{.$value} infinite values were filtered",
                             " in {.$name}. \n "))

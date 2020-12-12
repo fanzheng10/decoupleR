@@ -8,8 +8,11 @@
 run_benchmark <- function(design,
                           .minsize = 10,
                           .form = T,
-                          .perform = T
+                          .perform = T,
+                          .silent = T
                           ){
+
+
   res <- design %>%
     format_design() %>%
     mutate(activity = pmap(.,
@@ -31,17 +34,18 @@ run_benchmark <- function(design,
         .GlobalEnv$set_source <- readRDS(source_loc)
       }
 
-
       # Filter set_source/network
       .GlobalEnv$ss_filtered <- filter_sets(set_source, source_col,
                                             filter_column, filter_criteria,
-                                            .minsize)
+                                            .minsize, .silent)
 
       # Print Current Row/Run
-      .curr_row <- paste(set_name, bench_name,
-                         paste0(unlist(filter_criteria), collapse=""),
-                         sep="_")
-      message(str_glue("Currently Running: {.curr_row}"))
+      if(!.silent){
+        .curr_row <- paste(set_name, bench_name,
+                           paste0(unlist(filter_criteria), collapse=""),
+                           sep="_")
+        message(str_glue("Currently Running: {.curr_row}"))
+      }
 
       # Obtain Activity with decouple and format
       decouple(mat = gene_expression, network = ss_filtered,
@@ -52,8 +56,8 @@ run_benchmark <- function(design,
         inner_join(meta_data, by="id")  %>%
         group_split(statistic, .keep=T)
     })) %>% {
-      if(.form & !.perform) bench_format(.)
-      else if(.form & .perform) bench_format(.) %>%
+      if(.form & !.perform) bench_format(., silent=.silent)
+      else if(.form & .perform) bench_format(., silent=.silent) %>%
         mutate(roc = activity %>% map(calc_roc_curve),
                prroc = activity %>% map(calc_pr_curve))
       else .
@@ -71,6 +75,5 @@ run_benchmark <- function(design,
                        summary=list(NULL),
                        design=design)
   }
-
   return(bench_result)
 }

@@ -8,6 +8,7 @@
 get_bench_summary <- function(.res_tibble) {
   # get roc results
   roc <- format_roc(.res_tibble, "roc")
+  print(roc)
 
   # get PR roc results
   pr_roc <- format_roc(.res_tibble, "prroc")
@@ -80,7 +81,7 @@ get_bench_summary <- function(.res_tibble) {
     inner_join(x=.,
                y=(roc %>%
                     group_by(name_lvl) %>%
-                    summarise(source_coverage = "roc$coverage") %>%
+                    summarise(source_coverage = coverage) %>%
                     distinct() %>%
                     ungroup() %>%
                     separate(col="name_lvl",
@@ -110,7 +111,9 @@ get_bench_summary <- function(.res_tibble) {
 format_roc <- function(.res_tibble, roc_column){
   apply(.res_tibble, 1, function(df) {
     df[roc_column] %>%
+      enframe() %>%
       as_tibble() %>%
+      unnest(value) %>%
       mutate(name = df$set_bench,
              filter_criteria = df$filter_criteria,
              statistic = df$statistic) %>%

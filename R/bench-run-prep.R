@@ -34,7 +34,7 @@ check_prereq <- function(vector_loc){
 #'
 #'
 #'
-filter_sets <- function(set_source, source_col, .lvls, lvls, .minsize){
+filter_sets <- function(set_source, source_col, .lvls, lvls, .minsize, silent){
 
   n_duprows <- sum(duplicated(set_source))
 
@@ -48,7 +48,7 @@ filter_sets <- function(set_source, source_col, .lvls, lvls, .minsize){
     ungroup() %>%
     rename(source_col = .source) #* !!ensym(source_col) not found
 
-  if (n_duprows){
+  if (n_duprows & !silent){
     warning(str_glue("{n_duprows} rows were duplicated in the set resource! ",
                      "{sum(duplicated(gs_filtered))} duplicated rows ",
                      "remain after filtering."))
