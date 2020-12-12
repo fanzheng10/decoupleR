@@ -34,19 +34,19 @@ check_prereq <- function(vector_loc){
 #'
 #'
 #'
-filter_sets <- function(set_source, gene_source, .lvls, lvls, .minsize){
+filter_sets <- function(set_source, source_col, .lvls, lvls, .minsize){
 
   n_duprows <- sum(duplicated(set_source))
 
   gs_filtered <- set_source %>%
     dplyr::filter(.data[[.lvls]] %in% lvls) %>%
     distinct_at(vars(-.data[[.lvls]]), .keep_all = F) %>%
-    rename(.source = gene_source) %>% #*
+    rename(.source = source_col) %>% #*
     group_by(.source) %>%
     add_count() %>%
     filter(n >= .minsize) %>%
     ungroup() %>%
-    rename(gene_source = .source) #* !!ensym(gene_source) not found
+    rename(source_col = .source) #* !!ensym(source_col) not found
 
   if (n_duprows){
     warning(str_glue("{n_duprows} rows were duplicated in the set resource! ",

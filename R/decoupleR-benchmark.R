@@ -17,7 +17,7 @@ run_benchmark <- function(design,
     format_design() %>%
     mutate(activity = pmap(.,
                            .f=function(set_name, bench_name, net_loc, lvls,
-                                       gene_source, target, statistics,
+                                       source_col, target_col, statistics,
                                        bnch_expr, bench_meta,
                                        .net_bln, .expr_bln, .meta_bln, opts){
 
@@ -33,7 +33,7 @@ run_benchmark <- function(design,
       }
 
       # Filter set_source/network
-      .GlobalEnv$ss_filtered <- filter_sets(set_source, gene_source,
+      .GlobalEnv$ss_filtered <- filter_sets(set_source, source_col,
                                             .lvls, lvls, .minsize)
 
       # Print Current Row/Run
@@ -44,7 +44,7 @@ run_benchmark <- function(design,
 
       # Obtain Activity with decouple and format
       decouple(mat = gene_expression, network = ss_filtered,
-               .source = gene_source, .target = target,
+               .source = source_col, .target = target_col,
                statistics = statistics,
                .options = opts)  %>%
         dplyr::rename(id=condition) %>%
