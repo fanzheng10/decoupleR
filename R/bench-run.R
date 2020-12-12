@@ -6,9 +6,9 @@
 #' @export
 format_design <- function(design){
   design %>%
-    mutate(.net_bln = net_loc %>% check_prereq(),
-           .expr_bln = bnch_expr %>% check_prereq(),
-           .meta_bln = bench_meta %>% check_prereq())
+    mutate(.source_bln = source_loc %>% check_prereq(),
+           .expr_bln = bexpr_loc %>% check_prereq(),
+           .meta_bln = bmeta_loc %>% check_prereq())
 }
 
 

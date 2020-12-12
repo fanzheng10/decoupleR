@@ -2,51 +2,52 @@
 #'
 #' @inheritParams format_design
 #' @param .minsize regulon/gene set minimum number of targets/members
-#' @param .lvls column name in gene set/network resource that you wish to filter
-#' to, in relation to the lvls in design
 #' @param .form bool whether to format or not
 #' @param .perform bool whether to calculate roc and performance summary
 #' @return An S4 object of class BenchResult
 run_benchmark <- function(design,
                           .minsize = 10,
-                          .lvls = "confidence",
                           .form = T,
                           .perform = T
                           ){
   res <- design %>%
     format_design() %>%
     mutate(activity = pmap(.,
-                           .f=function(set_name, bench_name, net_loc, lvls,
-                                       source_col, target_col, statistics,
-                                       bnch_expr, bench_meta,
-                                       .net_bln, .expr_bln, .meta_bln, opts){
+                           .f=function(set_name, bench_name,
+                                       stats_list, opts_list,
+                                       bexpr_loc, bmeta_loc, source_loc,
+                                       source_col, target_col,
+                                       filter_column, filter_criteria,
+                                       .source_bln, .expr_bln, .meta_bln){
 
-      # Check conditions and load prerequisites
-      if(!.net_bln){
-        .GlobalEnv$set_source <- readRDS(net_loc)
+       # Check and Load Prerequisites
+       if(!.expr_bln){
+         .GlobalEnv$gene_expression <- readRDS(bexpr_loc) %>% as.matrix()
+       }
+       if(!.meta_bln){
+         .GlobalEnv$meta_data <- readRDS(bmeta_loc)
+       }
+      if(!.source_bln){
+        .GlobalEnv$set_source <- readRDS(source_loc)
       }
-      if(!.expr_bln){
-        .GlobalEnv$gene_expression <- readRDS(bnch_expr) %>% as.matrix()
-      }
-      if(!.meta_bln){
-        .GlobalEnv$meta_data <- readRDS(bench_meta)
-      }
+
 
       # Filter set_source/network
       .GlobalEnv$ss_filtered <- filter_sets(set_source, source_col,
-                                            .lvls, lvls, .minsize)
+                                            filter_column, filter_criteria,
+                                            .minsize)
 
       # Print Current Row/Run
       .curr_row <- paste(set_name, bench_name,
-                         paste0(unlist(lvls), collapse=""),
+                         paste0(unlist(filter_criteria), collapse=""),
                          sep="_")
       message(str_glue("Currently Running: {.curr_row}"))
 
       # Obtain Activity with decouple and format
       decouple(mat = gene_expression, network = ss_filtered,
                .source = source_col, .target = target_col,
-               statistics = statistics,
-               .options = opts)  %>%
+               statistics = stats_list,
+               .options = opts_list)  %>%
         dplyr::rename(id=condition) %>%
         inner_join(meta_data, by="id")  %>%
         group_split(statistic, .keep=T)

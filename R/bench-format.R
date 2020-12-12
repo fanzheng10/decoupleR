@@ -7,16 +7,16 @@ bench_format <- function(bench_res){
   res_format <- bench_res %>%
     unite("set_bench", set_name, bench_name) %>%
     unnest(activity) %>%
-    # convert lvls from character to string
+    # convert filter_criteria from character to string
     rowwise() %>%
-    mutate(lvls = paste0(unlist(lvls), collapse = "")) %>%
+    mutate(filter_criteria = paste0(unlist(filter_criteria), collapse = "")) %>%
     ungroup() %>%
     # get statistic name
     mutate(statistic = activity %>%
              map(function(tib)
                unique(tib[["statistic"]]))) %>%
     unnest(statistic) %>%
-    select(set_bench, lvls, statistic, activity)
+    select(set_bench, filter_criteria, statistic, activity)
 
   # Check and filter infinite values
   inf_sums <- lapply(res_format$activity,
