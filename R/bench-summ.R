@@ -10,7 +10,7 @@ get_bench_summary <- function(.res_tibble) {
   roc <- format_roc(.res_tibble, "roc")
 
   # get PR roc results
-  pr_roc <- format_roc(.res_tibble, "prroc")
+  pr <- format_roc(.res_tibble, "prroc")
 
   # Plot ROC
   roc_plot <- ggplot(roc, aes(x = fpr, y = tpr, colour = run_key)) +
@@ -20,7 +20,7 @@ get_bench_summary <- function(.res_tibble) {
     ylab("TPR (sensitivity)")
 
   # Plot PR ROC
-  pr_roc_plot <- ggplot(pr_roc, aes(x = recall, y = precision , colour = run_key)) +
+  pr_plot <- ggplot(pr, aes(x = recall, y = precision , colour = run_key)) +
     geom_line() +
     geom_abline(intercept = 0, slope = 1, linetype = "dashed") +
     xlab("Recall/Sensitivity") +
@@ -48,13 +48,13 @@ get_bench_summary <- function(.res_tibble) {
   auroc_heat <- auroc_tibble %>% get_auroc_heat()
 
   # Extract AU PRROC
-  pr_auroc_tibble <- .res_tibble %>%
+  prauc_tibble <- .res_tibble %>%
     unnest(prroc) %>%
     select(set_bench, filter_crit, statistic, auc) %>%
     distinct()
 
   # AU PRROC Heatmap
-  prroc_heat <- pr_auroc_tibble %>% get_auroc_heat()
+  pr_heat <- prauc_tibble %>% get_auroc_heat()
 
   # get computational time info
   comp_time <- .res_tibble %>%
@@ -72,8 +72,8 @@ get_bench_summary <- function(.res_tibble) {
 
 
   # Join AUROC, PRROC, Coverage, and Comp time
-  auroc_summary <- auroc_tibble %>%
-    inner_join(pr_auroc_tibble %>%
+  summary_table <- auroc_tibble %>%
+    inner_join(prauc_tibble %>%
                  select(set_bench, auc, statistic) %>%
                  rename(pr_auc = auc),
                by = c("set_bench", "statistic")) %>%
@@ -92,11 +92,11 @@ get_bench_summary <- function(.res_tibble) {
                by = c("set_bench", "filter_crit")) %>%
     distinct()
 
-  bench_summary <- list(auroc_summary, roc_plot, pr_roc_plot,
-                        auroc_plot, auroc_heat, prroc_heat)
+  bench_summary <- list(summary_table, roc_plot, pr_plot,
+                        auroc_plot, auroc_heat, pr_heat)
 
-  names(bench_summary) <- c("auroc_summary", "roc_plot", "pr_roc_plot",
-                            "auroc_plot", "auroc_heat", "prroc_heat")
+  names(bench_summary) <- c("summary_table", "roc_plot", "pr_plot",
+                            "auroc_plot", "auroc_heat", "pr_heat")
 
   return(bench_summary)
 }

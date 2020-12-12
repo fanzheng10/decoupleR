@@ -7,11 +7,10 @@
 #' @param ranked logical flag indicating if input is derived from composite
 #'   ranking that already took up-/downregulation (sign) into account
 #'
-#' @return tidy data frame with tpr, fpr, auc, n, tp, tn and coverage
+#' @return tidy data frame with precision, recall, auc, n, tp, tn and coverage
 #'
 #' @import yardstick
-#' @import magrittr
-calc_pr_curve = function(df, downsampling = F, times = 1000, ranked = F) {
+calc_pr_curve = function(df, downsampling = T, times = 10, ranked = F) {
 
   if (ranked == T) {
     df = df %>% prepare_for_roc(., filter_tn = T, ranked = T)
@@ -41,12 +40,12 @@ calc_pr_curve = function(df, downsampling = F, times = 1000, ranked = F) {
         pr_curve(response, predictor)
       auc = df_sub %>%
         pr_auc(response, predictor) %>%
-        select(.estimate)
+        pull(.estimate)
 
-      res_sub = tibble(tpr = r_sub$precision,
-                       fpr = 1-r_sub$recall,
-                       th = r_sub$thresholds,
-                       auc = r_sub$auc,
+      res_sub = tibble(precision = r_sub$precision,
+                       recall = 1-r_sub$recall,
+                       th = r_sub$.threshold,
+                       auc = auc,
                        n = length(which(df$response == 1)),
                        tp = nrow(tp),
                        tn = nrow(tn),
@@ -54,6 +53,10 @@ calc_pr_curve = function(df, downsampling = F, times = 1000, ranked = F) {
         mutate_("run" = i)
 
     })
+
+    # Get Average AUC
+    res$auc <- sum(unique(res$auc))/unique(res$n)
+
   } else {
     r = df %>%
       pr_curve(response, predictor)
@@ -71,6 +74,7 @@ calc_pr_curve = function(df, downsampling = F, times = 1000, ranked = F) {
       arrange(precision, precision)
 
   }
+
   return(res)
 }
 

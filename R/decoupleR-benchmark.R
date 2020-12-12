@@ -9,7 +9,10 @@ run_benchmark <- function(.design,
                           .minsize = 10,
                           .form = T,
                           .perform = T,
-                          .silent = T
+                          .silent = T,
+                          .downsample_pr = F,
+                          .downsample_roc = F,
+                          .downsample_times = 100
                           ){
   res <- .design %>%
     format_design() %>%
@@ -57,8 +60,14 @@ run_benchmark <- function(.design,
       })) %>% {
       if(.form & !.perform) bench_format(., silent=.silent)
       else if(.form & .perform) bench_format(., silent=.silent) %>%
-        mutate(roc = activity %>% map(calc_roc_curve),
-               prroc = activity %>% map(calc_pr_curve))
+        mutate(roc = activity %>%
+                 map(~calc_roc_curve(df=.x,
+                                    downsampling=.downsample_roc,
+                                    times=.downsample_times)),
+               prroc = activity %>%
+                 map(~calc_pr_curve(df=.x,
+                                    downsampling=.downsample_pr,
+                                    times=.downsample_times)))
       else .
     }
 
