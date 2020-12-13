@@ -4,6 +4,11 @@
 #' @param .minsize regulon/gene set minimum number of targets/members
 #' @param .form bool whether to format or not
 #' @param .perform bool whether to calculate roc and performance summary
+#' @param .silent bool whether to silence messages and warnings
+#' @param .downsample_pr whether to downsample precision recall curve TNs
+#' @param .downsample_roc whether to downsample ROC true negatives
+#' @param .downsample_times downsampling iterattions
+#' @export
 #' @return An S4 object of class BenchResult
 run_benchmark <- function(.design,
                           .minsize = 10,
@@ -12,7 +17,7 @@ run_benchmark <- function(.design,
                           .silent = T,
                           .downsample_pr = F,
                           .downsample_roc = F,
-                          .downsample_times = 100
+                          .downsample_times = 1000
                           ){
   res <- .design %>%
     format_design() %>%
@@ -56,7 +61,8 @@ run_benchmark <- function(.design,
                .options = opts_list)  %>%
         dplyr::rename(id=condition) %>%
         inner_join(meta_data, by="id")  %>%
-        group_split(statistic, .keep=T)
+        group_split(statistic, .keep=T) %>%
+        as.list()
       })) %>% {
       if(.form & !.perform) bench_format(., silent=.silent)
       else if(.form & .perform) bench_format(., silent=.silent) %>%

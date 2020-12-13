@@ -10,7 +10,7 @@
 #' @return tidy data frame with precision, recall, auc, n, tp, tn and coverage
 #'
 #' @import yardstick
-calc_pr_curve = function(df, downsampling = T, times = 10, ranked = F) {
+calc_pr_curve = function(df, downsampling = T, times = 1000, ranked = F) {
 
   if (ranked == T) {
     df = df %>% prepare_for_roc(., filter_tn = T, ranked = T)
@@ -122,12 +122,12 @@ calc_roc_curve = function(df, downsampling = F, times = 1000, ranked = F) {
         roc_curve(response, predictor)
       auc = df_sub %>%
         roc_auc(response, predictor) %>%
-        select(.estimate)
+        pull(.estimate)
 
       res_sub = tibble(tpr = r_sub$sensitivities,
                        fpr = 1-r_sub$specificities,
-                       th = r_sub$thresholds,
-                       auc = r_sub$auc,
+                       th = r_sub$.threshold,
+                       auc = auc,
                        n = length(which(df$response == 1)),
                        tp = nrow(tp),
                        tn = nrow(tn),

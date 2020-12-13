@@ -68,7 +68,9 @@ get_bench_summary <- function(.res_tibble) {
     # calculate regulon size
     group_by(set_bench, filter_crit) %>%
     mutate(regulon_time = sum(statistic_time)) %>%
-    select(set_bench, filter_crit, statistic_time, regulon_time)
+    select(set_bench, statistic, filter_crit, statistic_time, regulon_time)
+
+  print(comp_time)
 
 
   # Join AUROC, PRROC, Coverage, and Comp time
@@ -77,6 +79,7 @@ get_bench_summary <- function(.res_tibble) {
                  select(set_bench, auc, statistic) %>%
                  rename(pr_auc = auc),
                by = c("set_bench", "statistic")) %>%
+    distinct() %>%
     inner_join(x=.,
                y=(roc %>%
                     group_by(name_lvl) %>%
@@ -87,9 +90,10 @@ get_bench_summary <- function(.res_tibble) {
                              into=c("set_bench", "filter_crit"),
                              sep="\\.")),
                by = c("set_bench", "filter_crit")) %>%
+    distinct() %>%
     inner_join(x=.,
                y=comp_time,
-               by = c("set_bench", "filter_crit")) %>%
+               by = c("set_bench", "filter_crit", "statistic")) %>%
     distinct()
 
   bench_summary <- list(summary_table, roc_plot, pr_plot,
