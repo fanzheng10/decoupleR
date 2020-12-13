@@ -10,7 +10,24 @@
 #' @return tidy data frame with precision, recall, auc, n, tp, tn and coverage
 #'
 #' @import yardstick
-calc_pr_curve = function(df, downsampling = T, times = 1000, ranked = F) {
+calc_curve = function(df, downsampling = T,
+                         times = 1000,
+                         ranked = F,
+                         curve="PR") {
+
+  if(curve=="PR"){
+    res_col_1 <- "precision"
+    res_col_2 <- "recall"
+    curve_fun = yardstick::pr_curve
+    auc_fun = yardstick::pr_auc
+  }
+  else if(curve=="ROC"){
+    res_col_1 <- "sensitivity"
+    res_col_2 <- "specificity"
+    curve_fun = yardstick::roc_curve
+    auc_fun = yardstick::roc_auc
+  }
+
 
   if (ranked == T) {
     df = df %>% prepare_for_roc(., filter_tn = T, ranked = T)
@@ -29,7 +46,6 @@ calc_pr_curve = function(df, downsampling = T, times = 1000, ranked = F) {
   feature_coverage = length(unique(df$tf))
 
   if (downsampling == T) {
-    # number of true positives
     num_tp = nrow(tp)
 
     res = map_df(seq(from=1, to=times, by=1), function(i) {
@@ -37,13 +53,14 @@ calc_pr_curve = function(df, downsampling = T, times = 1000, ranked = F) {
         bind_rows(tp)
 
       r_sub = df_sub %>%
-        pr_curve(response, predictor)
+        curve_fun(response, predictor)
+
       auc = df_sub %>%
-        pr_auc(response, predictor) %>%
+        auc_fun(response, predictor) %>%
         pull(.estimate)
 
-      res_sub = tibble(precision = r_sub$precision,
-                       recall = 1-r_sub$recall,
+      res_sub = tibble({{ res_col_1 }} := r_sub %>% pull(res_col_1),
+                       {{ res_col_2 }} := r_sub %>% pull(res_col_2),
                        th = r_sub$.threshold,
                        auc = auc,
                        n = length(which(df$response == 1)),
@@ -53,105 +70,26 @@ calc_pr_curve = function(df, downsampling = T, times = 1000, ranked = F) {
         mutate_("run" = i)
 
     })
-
     # Get Average AUC
-    res$auc <- sum(unique(res$auc))/unique(res$n)
+    res$auc <- sum(unique(res$auc))/length(unique(res$auc))
 
   } else {
     r = df %>%
-      pr_curve(response, predictor)
+      curve_fun(response, predictor)
     auc = df %>%
-      pr_auc(response, predictor)
+      auc_fun(response, predictor)
 
-    res = tibble(precision = r$precision,
-                 recall = r$recall,
+    res = tibble({{ res_col_1 }} := r %>% pull(res_col_1),
+                 {{ res_col_2 }} := r %>% pull(res_col_2),
                  th = r$.threshold,
                  auc = auc$.estimate,
                  n = length(which(df$response == 1)),
                  tp = nrow(tp),
                  tn = nrow(tn),
                  coverage = feature_coverage) %>%
-      arrange(precision, precision)
-
+      arrange(!!res_col_1, !!res_col_2)
   }
 
-  return(res)
-}
-
-
-#' This function calculates receiver operating characteristic
-#'
-#' @param df run_benchmark roc column provided as input
-#' @param downsampling logical flag indicating if the number of TN should be
-#'   downsampled to the number of TP
-#' @param times integer showing the number of downsampling
-#' @param ranked logical flag indicating if input is derived from composite
-#'   ranking that already took up-/downregulation (sign) into account
-#'
-#' @return tidy data frame with tpr, fpr, auc, n, tp, tn and coverage
-#'
-#' @import yardstick
-#' @import magrittr
-calc_roc_curve = function(df, downsampling = F, times = 1000, ranked = F) {
-
-  if (ranked == T) {
-    df = df %>% prepare_for_roc(., filter_tn = T, ranked = T)
-  } else {
-    df = df %>%
-      prepare_for_roc(., filter_tn = T, ranked = F)
-  }
-
-  if (length(which(df$response == 0)) == nrow(df)){
-    return(as_tibble(NULL))
-  }
-
-  tn = df %>% filter(response == 0)
-  tp = df %>% filter(response == 1)
-
-  feature_coverage = length(unique(df$tf))
-
-  if (downsampling == T) {
-    # number of true positives
-    num_tp = nrow(tp)
-
-    res = map_df(seq(from=1, to=times, by=1), function(i) {
-      df_sub = sample_n(tn, num_tp, replace=TRUE) %>%
-        bind_rows(tp)
-
-      r_sub = df_sub %>%
-        roc_curve(response, predictor)
-      auc = df_sub %>%
-        roc_auc(response, predictor) %>%
-        pull(.estimate)
-
-      res_sub = tibble(tpr = r_sub$sensitivities,
-                       fpr = 1-r_sub$specificities,
-                       th = r_sub$.threshold,
-                       auc = auc,
-                       n = length(which(df$response == 1)),
-                       tp = nrow(tp),
-                       tn = nrow(tn),
-                       coverage = feature_coverage) %>%
-        mutate_("run" = i)
-
-    })
-  } else {
-    r = df %>%
-      roc_curve(response, predictor)
-    auc = df %>%
-      roc_auc(response, predictor)
-
-    res = tibble(tpr = r$sensitivity,
-                 fpr = 1-r$specificity,
-                 th = r$.threshold,
-                 auc = auc$.estimate,
-                 n = length(which(df$response == 1)),
-                 tp = nrow(tp),
-                 tn = nrow(tn),
-                 coverage = feature_coverage) %>%
-      arrange(fpr, tpr)
-
-  }
   return(res)
 }
 
