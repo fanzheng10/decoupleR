@@ -1,11 +1,11 @@
 #' Function to format benchmarking results
 #'
 #' @param bench_res benchmarking results
+#' @param silent bool whether to display warnings or not
 #' @returns formatted benchmarking results
 #' @export
 bench_format <- function(bench_res, silent){
   res_format <- bench_res %>%
-    unite("set_bench", set_name, bench_name) %>%
     unnest(activity) %>%
     # convert filter_criteria from character to string
     rowwise() %>%
@@ -16,12 +16,13 @@ bench_format <- function(bench_res, silent){
              map(function(tib)
                unique(tib[["statistic"]]))) %>%
     unnest(statistic) %>%
-    select(set_bench, filter_crit, statistic, activity)
+    select(set_name, bench_name, filter_crit, statistic, activity)
 
   # Check and filter infinite values
   inf_sums <- lapply(res_format$activity,
                      function(x) sum(is.infinite(x$score))) %>%
-    setNames(paste(res_format$set_bench, res_format$statistic, sep="_")) %>%
+    setNames(paste(res_format$set_name, res_format$bench_name,
+                   res_format$statistic, sep="_")) %>%
     enframe() %>% unnest(value)
 
   if(sum(inf_sums$value)){
