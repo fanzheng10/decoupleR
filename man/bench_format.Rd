@@ -8,6 +8,8 @@ bench_format(bench_res, silent)
 }
 \arguments{
 \item{bench_res}{benchmarking results}
+
+\item{silent}{bool whether to display warnings or not}
 }
 \value{
 formatted benchmarking results

@@ -10,7 +10,7 @@ get_bench_summary(.res_tibble)
 \item{.res_tibble}{formatted bench result tibble with added auroc column}
 }
 \value{
-AUROC summary with TF coverage, ROC, AUROC, PRROC, Run time,
+AUROC summary with TF coverage, ROC, AUROC, PRAUC, Run time,
 ROC plots, and Heatmap plots
 }
 \description{

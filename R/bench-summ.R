@@ -1,7 +1,9 @@
 #' Function that provides summary and plots for the benchmark run
 #'
-#' @param .res_tibble formatted bench result tibble with added auroc column
-#' @return AUROC summary with TF coverage, ROC, AUROC, PRAUC, Run time,
+#' @param .res_tibble formatted bench result tibble with roc and prc columns
+#' roc column: Reciever Operator Curve Results (calculated with yardstick)
+#' prc column: Precision-Recall Curve Results (calculated with yardstick)
+#' @return A summary list with TF coverage, ROC, AUROC, PRAUC, Run time,
 #' ROC plots, and Heatmap plots
 #' @import ggplot2
 #' @import pheatmap
@@ -125,7 +127,7 @@ get_bench_summary <- function(.res_tibble) {
 
 #' Helper function to format (PR) Receiver Operator Curve results
 #' @param .res_tibble formatted bench result tibble with added auroc column
-#' @param roc_column (PR) ROC column to format
+#' @param roc_column PR/ROC column to format
 #' @return returns
 format_roc <- function(.res_tibble, roc_column){
   apply(.res_tibble, 1, function(df) {
@@ -146,7 +148,7 @@ format_roc <- function(.res_tibble, roc_column){
 
 #' Helper function to produce AUROC heatmap
 #' @param auroc_tibble Tibble with calculated AUROC
-#' @return returns an AUROC heatmap
+#' @return returns an AUROC or Precision-Recall AUC heatmap
 #' @import ggplot2
 get_auroc_heat <- function(auroc_tibble){
   auroc_tibble %>%

@@ -1,10 +1,11 @@
 # Helper functions for run_benchmark ----
 
-#' Helper Function to to generate the booleans used to check if the current
-#' locations/data objects are the same as the previous one
+#' Helper Function to to generate the bools used to check if the current
+#' locations/rds objects are the same as the previous one.
 #' @param .design location of a json file with run design specifications
 #' @return a design tibble to be used in benchmarking
-#' @export
+#' @details This is used to limit the number of times that any of the
+#' prerequsites is loaded.
 format_design <- function(.design){
   .design %>%
     mutate(.source_bln = source_loc %>% check_preced(),
@@ -29,11 +30,13 @@ check_preced <- function(vector_loc){
 }
 
 
-
 #' Helper Function that checks if the source_set/network set is appropriately
 #' formatted
 #'
 #' @param source_loc location of the source_set
+#' @param target_col name of the .target column
+#' @param source_col name of the .source column
+#' @param filter_col name of the column by which we wish to filter
 check_prereq <- function(source_loc, target_col, source_col, filter_col){
   expected_cols <- c(target_col, source_col, filter_col,
                      "mor", "likelihood")
@@ -62,13 +65,13 @@ check_prereq <- function(source_loc, target_col, source_col, filter_col){
 
 #' Helper Function to filter and format the gene set resource
 #'
-#' @param set_source
-#' @param source_col
-#' @param filter_col
-#' @param filter_crit
-#' @param .minsize
-#' @param silent
-#' @return returns a
+#' @param set_source Set Source (e.g. TF regulon sets, GO:term sets, etc)
+#' @param source_col name of the .target column
+#' @param filter_col name of the column by which we wish to filter
+#' @param filter_crit criteria by which we wish to filter (e.g. confidence)
+#' @param .minsize minimum size of each set
+#' @param silent bool whether to silence wanring messages
+#' @return returns a filtered and formatted set source
 filter_sets <- function(set_source, source_col,
                         filter_col, filter_crit,
                         .minsize, silent){

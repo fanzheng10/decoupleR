@@ -4,7 +4,16 @@
 \alias{run_benchmark}
 \title{Benchmark gene sets with decouple}
 \usage{
-run_benchmark(.design, .minsize = 10, .form = T, .perform = T, .silent = T)
+run_benchmark(
+  .design,
+  .minsize = 10,
+  .form = T,
+  .perform = T,
+  .silent = T,
+  .downsample_pr = T,
+  .downsample_roc = F,
+  .downsample_times = 1000
+)
 }
 \arguments{
 \item{.design}{location of a json file with run design specifications}
@@ -14,6 +23,14 @@ run_benchmark(.design, .minsize = 10, .form = T, .perform = T, .silent = T)
 \item{.form}{bool whether to format or not}
 
 \item{.perform}{bool whether to calculate roc and performance summary}
+
+\item{.silent}{bool whether to silence messages and warnings}
+
+\item{.downsample_pr}{whether to downsample precision recall curve TNs}
+
+\item{.downsample_roc}{whether to downsample ROC true negatives}
+
+\item{.downsample_times}{downsampling iterattions}
 }
 \value{
 An S4 object of class BenchResult
