@@ -15,7 +15,8 @@ run_mean(
   times = 2,
   seed = 42,
   sparse = TRUE,
-  randomize_type = "rows"
+  randomize_type = "rows",
+  na.rm = FALSE
 )
 }
 \arguments{
@@ -45,6 +46,8 @@ number generation.}
 \item{sparse}{Should the matrices used for the calculation be sparse?}
 
 \item{randomize_type}{How to randomize the expression matrix.}
+
+\item{na.rm}{Should missing values be removed?}
 }
 \value{
 A long format tibble of the enrichment scores for each tf across the conditions.

@@ -19,6 +19,7 @@
 #'  number generation.
 #' @param sparse Should the matrices used for the calculation be sparse?
 #' @param randomize_type How to randomize the expression matrix.
+#' @param na.rm Should missing values be removed?
 #'
 #' @return
 #'  A long format tibble of the enrichment scores for each tf across the conditions.
@@ -54,7 +55,8 @@ run_mean <- function(
     times = 2,
     seed = 42,
     sparse = TRUE,
-    randomize_type = "rows") {
+    randomize_type = "rows",
+    na.rm = FALSE) {
 
     # Before to start ---------------------------------------------------------
     .start_time <- Sys.time()
@@ -101,7 +103,15 @@ run_mean <- function(
         )
 
     # Analysis ----------------------------------------------------------------
-    .mean_analysis(mat, weight_mat, shared_targets, times, seed, randomize_type) %>%
+    .mean_analysis(
+        mat = mat,
+        weight_mat = weight_mat,
+        shared_targets = shared_targets,
+        times = times,
+        seed = seed,
+        randomize_type = randomize_type,
+        na.rm = na.rm
+    ) %>%
         add_column(
             statistic_time = difftime(Sys.time(), .start_time),
             .after = "score"
@@ -124,7 +134,14 @@ run_mean <- function(
 #'
 #' @keywords internal
 #' @noRd
-.mean_analysis <- function(mat, weight_mat, shared_targets, times, seed, randomize_type) {
+.mean_analysis <- function(
+    mat,
+    weight_mat,
+    shared_targets,
+    times,
+    seed,
+    randomize_type,
+    na.rm) {
     # Thus, it is only necessary to define if we want
     # to evaluate a random model or not.
     mean_run <- partial(
@@ -142,8 +159,8 @@ run_mean <- function(
         group_by(.data$tf, .data$condition) %>%
         summarise(
             null_distribution = list(.data$value),
-            null_mean = mean(.data$value),
-            null_sd = stats::sd(.data$value),
+            null_mean = mean(.data$value, na.rm = na.rm),
+            null_sd = stats::sd(.data$value, na.rm = na.rm),
             .groups = "drop"
         ) %>%
         # Run the true model and joined to random.
